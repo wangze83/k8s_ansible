@@ -1,0 +1,15 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+    # Remove FUSE
+    - command: rm /etc/cron.d/check.hadoop.fuse.cron
+    - command: /s/apps/fuse.hdp/umount.sh
+
+    - command: pkill -f '/bin/sh /usr/local/bin/svscanboot'
+    - command: cp -rp /da1 /da0
+    - mount: name=/da1 src=/dev/mapper/VolGroup00-LogVol--da1 state=absent
+    - file: path=/da1 state=absent
+    - command: mv /da0 /da1
+    - lvol: vg=VolGroup00 lv=LogVol-da1 state=absent force=yes
+  become: yes
+  gather_facts: yes

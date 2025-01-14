@@ -1,0 +1,15 @@
+- file: 
+    path: "/data/usr/certs" 
+    state: directory
+- copy: src="../files/certs/{{orgs}}/ca.pem"
+    dest="/data/usr/certs/" mode="644"
+- copy: src="../files/certs/{{orgs}}/kube-service-account.pem"
+    dest="/data/usr/certs/" mode="644"
+- copy: src="../files/certs/{{orgs}}/kube-service-account-key.pem"
+    dest="/data/usr/certs/" mode="600"
+- copy: src="../files/node-certs/docker_certs/{{ inventory_hostname }}.csr"
+    dest="/data/usr/certs/" mode="644"
+- copy: src="../files/node-certs/docker_certs/{{ inventory_hostname }}.pem"
+    dest="/data/usr/certs/" mode="644"
+- copy: src="../files/node-certs/docker_certs/{{ inventory_hostname }}-key.pem"
+    dest="/data/usr/certs/" mode="600"

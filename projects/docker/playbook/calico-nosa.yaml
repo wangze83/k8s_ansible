@@ -1,0 +1,52 @@
+---
+### calico step 1
+- hosts: "{{ group }}"
+  serial: 5
+  tasks:
+    - shell: "/usr/sbin/ethtool eth0 | grep Speed | awk '{print $2}'"
+      register: eth0_result
+      ignore_errors: yes
+
+    - shell: "/usr/sbin/ethtool eth2 | grep Speed | awk '{print $2}'"
+      register: eth2_result
+      ignore_errors: yes
+    
+    - shell: "/usr/sbin/ethtool eth3 | grep Speed | awk '{print $2}'"
+      register: eth3_result
+      ignore_errors: yes
+
+    # TODO: Call NOSA API in CMDB
+    # Update TOR: https://network.wz.net/network/readme/
+    - name: eth0 as iface
+      ignore_errors: yes
+      local_action: "command /bin/sh ../files/tor.sh {{ calico_idc }} {{ hostvars[inventory_hostname]['ansible_eth0']['ipv4']['address'] }} {{ hostvars[inventory_hostname]['ansible_eth0']['macaddress'] }}"
+      when: eth0_result.failed == False and eth0_result.stdout == "1000Mb/s"
+      become: false
+
+    - name: eth0 as iface
+      ignore_errors: yes
+      local_action: "command /bin/sh ../files/tor.sh {{ calico_idc }} {{ hostvars[inventory_hostname]['ansible_eth0']['ipv4']['address'] }} {{ hostvars[inventory_hostname]['ansible_eth0']['macaddress'] }}"
+      when: eth0_result.failed == False and eth0_result.stdout == "10000Mb/s"
+      become: false
+
+    - name: eth2 as iface
+      ignore_errors: yes
+      local_action: "command /bin/sh ../files/tor.sh {{ calico_idc }} {{ hostvars[inventory_hostname]['ansible_eth2']['ipv4']['address'] }} {{ hostvars[inventory_hostname]['ansible_eth2']['macaddress'] }}"
+      when: eth2_result.failed == False and eth2_result.stdout == "10000Mb/s"
+      become: false
+    
+    - file: path="{{ calico_home }}/cfg" state=directory
+
+    - name: 安装系统工具
+      yum: name=jq state=latest
+
+    - name: cp peer.sh
+      template: src=../templates/peer.sh.j2 dest={{calico_home}}/cfg/peer.sh
+    - name: gen peer.yaml
+      shell: "sh {{calico_home}}/cfg/peer.sh > {{calico_home}}/cfg/calico-peer.yaml"
+    - name: cat peer.yaml
+      shell: "cat {{calico_home}}/cfg/calico-peer.yaml"
+      register: result
+    - debug: var=result['stdout_lines']
+  become: yes
+  gather_facts: yes

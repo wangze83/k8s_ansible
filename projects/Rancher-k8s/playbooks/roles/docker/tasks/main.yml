@@ -1,0 +1,79 @@
+---
+#- include_tasks: 
+#    file: 'sre_init.yml' 
+#    apply: 
+#      tags:
+#      - init
+#      - node
+#  tags: always
+
+- include_tasks: 
+    file: 'docker.yml'
+    apply:
+      tags:
+      - docker
+      - node
+  tags: always
+
+- include_tasks: 
+    file: 'swap.yml'
+    apply: 
+      tags:
+      - swap
+      - node
+  tags: always
+
+- include_tasks: 
+    file: 'selinux.yml'
+    apply:
+      tags:
+      - selinux
+      - node     
+  tags:
+  - always
+
+- include_tasks: 
+    file: 'firewalld.yml'
+    apply: 
+      tags:
+      - firewalld
+      - node
+  tags:
+  - always
+
+- include_tasks: 
+    file: 'ipvs.yml'
+    apply: 
+      tags:
+      - ipvs
+      - node
+  tags:
+  - always
+
+- include_tasks: 
+    file: 'lxcfs.yml'
+    apply: 
+      tags:
+      - lxcfs
+      - node
+  tags:
+  - always
+
+- include_tasks: 
+    file: 'add_node.yml'
+    apply:
+      tags:
+      - add_node
+      - node
+  tags:
+  - always
+
+- include_tasks: 
+    file: 'check_pod.yml'
+    apply: 
+      tags:
+      - check_pod
+      - node
+  tags:
+  - always
+

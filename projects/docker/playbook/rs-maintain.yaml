@@ -1,0 +1,16 @@
+---
+## 边缘节点维护下线
+- hosts: "{{ group }}"
+  vars_files:
+    - ../inventory/vars/lvs
+ #serial: 1
+  tasks:
+    # usage: --direct --add-rule { ipv4 | ipv6 | eb } <table> <chain> <priority> <args>
+    - command: firewall-cmd --direct --add-rule ipv4 raw PREROUTING 1 -s {{ item }} -m comment --comment "RS Maintain Block Keepalived" -j DROP
+      with_items: "{{ keepalived_ips }}"
+
+
+#   - command: firewall-cmd --direct --remove-rule ipv4 raw PREROUTING 1 -s {{ item }} -m comment --comment "RS Maintain Block Keepalived" -j DROP
+#     with_items: "{{ keepalived_ips }}"
+  become: yes
+  gather_facts: yes

@@ -1,0 +1,5 @@
+# RbdDevice		Parameters
+#poolname/imagename	id=client,keyring=/etc/ceph/ceph.client.keyring
+{% for img in images %}
+{{ceph.pool}}/{{img}} id=search,keyring=/etc/ceph/ceph.client.search.keyring
+{% endfor %}

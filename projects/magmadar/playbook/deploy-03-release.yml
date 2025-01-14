@@ -1,0 +1,27 @@
+---
+- hosts: "{{ dc }}"
+  remote_user: group
+  tasks:
+    # release_version: x.x.x
+    # 检查服务部署状态
+    - stat: path=/search/srv/magmadar-ng/releases/magmadarNG-{{ release_version }}
+      register: st
+    - fail: msg="/search/srv/magmadar-ng/releases/magmadarNG-{{ release_version }} is not exist!"
+      when: not st.stat.isdir
+
+    # 停止服务环境
+    - supervisorctl: name="magmadar-ng:" state=stopped
+
+    # 更新服务
+    - file:
+        path=/search/srv/magmadar-ng/magmadar
+        src=/search/srv/magmadar-ng/releases/magmadarNG-{{ release_version }}
+        state=link
+    - command: "supervisorctl restart magmadar-ng:"
+    - command: "supervisorctl status magmadar-ng:"
+      register: output
+    - fail: msg="magmadar-ng is not running!"
+      when: output.stdout.find("RUNNING") == -1
+  sudo: no
+  gather_facts: no
+

@@ -1,0 +1,26 @@
+---
+- hosts: "{{ group }}"
+  serial: 1
+  tasks:
+    - name: ensure that firewalld is disable
+      service:  name=firewalld enabled=no
+      register: firewalld_status
+
+    - debug: msg="{{firewalld_status.status.ActiveState}}"
+
+    - block:
+        - debug: msg="firewalld is enabled"
+
+        ## 1. kubectl drain, 驱逐 Node 已有 Pod
+        - include_tasks: "../kubectl/drain.yml"
+        ## 2. 停用firewalld
+        - service: name=firewalld enabled=no
+        - service: name=firewalld state=stopped
+        ## kubectl uncordon, Node 恢复可调度
+        - include_tasks: "../kubectl/uncordon.yml"
+
+      when: firewalld_status.status.ActiveState == "active"
+
+
+  become: yes
+  gather_facts: true

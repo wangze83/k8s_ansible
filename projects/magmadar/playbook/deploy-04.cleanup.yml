@@ -1,0 +1,13 @@
+---
+- hosts: "{{ dc }}"
+  remote_user: group
+  tasks:
+    # 停止备份环境
+    - command: "supervisorctl stop magmadar-ng-backup:"
+    - command: "supervisorctl status magmadar-ng-backup:"
+      register: output
+    - fail: msg="magmadar-ng-backup is still running!"
+      when: output.stdout.find("RUNNING") != -1
+  sudo: no
+  gather_facts: no
+

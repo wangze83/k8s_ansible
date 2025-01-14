@@ -1,0 +1,52 @@
+---
+- hosts: "{{ dc }}"
+  remote_user: group
+  vars:
+    assets_path: ../files
+  tasks:
+    # 创建服务目录
+    - file: path=/search/local state=directory mode=0744
+    - file: path=/search/local/etc state=directory mode=0744
+    - file: path=/search/local/bin state=directory mode=0744
+    - file: path=/search/srv state=directory mode=0744
+    - file: path=/search/var/run state=directory mode=0744
+    - file: path=/search/var/lib state=directory mode=0744
+    - file: path=/search/var/log state=directory mode=0744
+    - file: path=/search/tmp state=directory mode=0744
+    - file: path=/s/logs/magmadar state=directory mode=0744
+    - file: path=/s/logs/nginx state=directory mode=0744
+
+    # 同步软件配置
+    - copy: src={{ assets_path }}/rc/bashrc dest=/search/.bashrc force=yes
+    - copy: src={{ assets_path }}/rc/vimrc dest=/search/.vimrc force=yes
+    - copy: src={{ assets_path }}/rc/gitconfig dest=/search/.gitconfig force=yes
+
+    # 安装htop
+    - copy: src={{ assets_path }}/bin/htop dest=/search/local/bin/htop force=no mode=744
+
+    # 安装Python
+    - synchronize: src={{ assets_path }}/python dest=/search/tmp/
+
+    - unarchive: src=/search/tmp/python/Py27.tar.gz dest=/search/tmp/
+        copy=no
+        creates=/search/tmp/Python-2.7.10
+    - command: make install
+        chdir=/search/tmp/Python-2.7.10
+        creates=/search/local/lib/python2.7
+    - command: /search/local/bin/python /search/tmp/python/get-pip.py --index-url=http://mirrors.aliyun.com/pypi/simple --trusted-host mirrors.aliyun.com
+        creates=/search/local/bin/pip2
+    - pip: executable=/search/local/bin/pip2 name=wheel extra_args='--upgrade --index-url=http://mirrors.aliyun.com/pypi/simple --trusted-host mirrors.aliyun.com'
+    - pip: executable=/search/local/bin/pip2 name=virtualenv extra_args='--upgrade --index-url=http://mirrors.aliyun.com/pypi/simple --trusted-host mirrors.aliyun.com'
+    - pip: executable=/search/local/bin/pip2 name=ipython extra_args='--upgrade --index-url=http://mirrors.aliyun.com/pypi/simple --trusted-host mirrors.aliyun.com'
+
+    - unarchive: src=/search/tmp/python/Py35.tar.gz dest=/search/tmp/
+        copy=no
+        creates=/search/tmp/Python-3.5.0
+    - command: make install
+        chdir=/search/tmp/Python-3.5.0
+        creates=/search/local/lib/python3.5
+    - pip: executable=/search/local/bin/pip3 name=wheel extra_args='--upgrade --index-url=http://mirrors.aliyun.com/pypi/simple --trusted-host mirrors.aliyun.com'
+    - pip: executable=/search/local/bin/pip3 name=ipython extra_args='--upgrade --index-url=http://mirrors.aliyun.com/pypi/simple --trusted-host mirrors.aliyun.com'
+
+  sudo: no
+  gather_facts: no

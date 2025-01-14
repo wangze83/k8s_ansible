@@ -1,0 +1,15 @@
+[Service]
+LimitNOFILE=1048576
+LimitNPROC=1048576
+ExecStart=
+ExecStart=/usr/bin/dockerd \
+          --storage-driver=overlay2 \
+          --storage-opt overlay2.size=100G \
+          --storage-opt overlay2.override_kernel_check=true\
+          --log-opt max-size=4g \
+          --log-opt max-file=5 \
+          --seccomp-profile=/etc/docker/seccomp.json \
+          --bridge=none \
+          --ip-masq=false \
+          --iptables=false \
+          --selinux-enabled=false

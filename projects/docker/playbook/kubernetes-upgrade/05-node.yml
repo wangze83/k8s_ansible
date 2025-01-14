@@ -1,0 +1,13 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+    # copy kubernetes node file
+    - unarchive: src=../../files/kubernetes-1.7.2.tar.gz dest={{ kube_home }} creates={{ kube_home }}/kubernetes-1.7.2
+    - file: path={{ kube_home }}/kubernetes-1.7.2 owner={{ kube_user }} group={{ kube_group }} recurse=yes
+    - file: path={{ kube_home }}/kubernetes src={{ kube_home }}/kubernetes-1.7.2 owner={{ kube_user }} group={{ kube_group }} state=link
+    # update kubelet config
+    - template: src=../../templates/kubelet.j2 dest={{ kube_home }}/cfg/kubelet owner={{ kube_user }} group={{ kube_group }}
+    - command: systemctl restart kubelet
+    - command: systemctl restart kube-proxy
+  become: yes
+  gather_facts: yes

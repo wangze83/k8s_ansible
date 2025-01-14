@@ -1,0 +1,12 @@
+redis:
+    requirepass:
+    maxmemory: 4g
+
+twemproxy:
+    listen: 0.0.0.0:16379
+    redis_auth:
+
+etcd:
+    data-dir: /s/var/lib/etcd-proxy
+    token: etcd-cluster-hawthorn
+

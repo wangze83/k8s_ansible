@@ -1,0 +1,21 @@
+- yum: name="policycoreutils-python" state=latest
+- yum: name="libltdl.x.7()(64bit)" state=latest
+- copy: src=../files/{{ docker_rpm }} dest=/tmp
+- copy: src=../files/{{ docker_selinux_rpm }} dest=/tmp
+- yum: name=/tmp/{{ docker_rpm }},/tmp/{{ docker_selinux_rpm }} state=present disable_gpg_check=yes
+
+- file: path="/etc/systemd/system/docker.service.d" state=directory
+- template: src=../templates/calico/docker-overlayfs.conf.j2 dest=/etc/systemd/system/docker.service.d/docker.conf
+
+- file: path="/etc/docker" state=directory
+- copy: src=../files/seccomp.json dest=/etc/docker/seccomp.json
+
+- command: systemctl daemon-reload
+- service: name=docker enabled=yes
+- service: name=docker state=started
+
+# docker login wz.cloud
+- file: path="/root/.docker" state=directory
+- copy: src=../files/docker.config dest=/root/.docker/config.json
+- command: docker pull x.wz.net/rhel7/pod-infrastructure
+

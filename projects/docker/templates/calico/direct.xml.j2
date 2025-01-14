@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<direct>
+  <chain table="filter" ipv="ipv4" chain="CALICO-ISOLATION"/>
+  <rule priority="0" table="filter" ipv="ipv4" chain="CALICO-ISOLATION"> ! -s {{ calico_pool['cidr'] }} ! -d {{ calico_pool['cidr'] }} -j RETURN</rule>
+
+  <rule priority="1" table="filter" ipv="ipv4" chain="FORWARD">-j CALICO-ISOLATION</rule>
+  <rule priority="1" table="filter" ipv="ipv4" chain="CALICO-ISOLATION">-m set --match-set ingress-deny-net src -j REJECT --reject-with icmp-host-prohibited</rule>
+
+  <rule priority="2" table="filter" ipv="ipv4" chain="CALICO-ISOLATION">-p tcp -m set --match-set egress-restrict-net dst -m set --match-set egress-deny-tcp-port dst -j REJECT --reject-with icmp-port-unreachable</rule>
+
+  <rule priority="3" table="filter" ipv="ipv4" chain="CALICO-ISOLATION">-p udp -m set --match-set egress-restrict-net dst -m set --match-set egress-deny-udp-port dst -j REJECT --reject-with icmp-port-unreachable</rule>
+
+  <rule priority="4" table="filter" ipv="ipv4" chain="CALICO-ISOLATION">-j ACCEPT</rule>
+</direct>
+

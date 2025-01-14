@@ -1,0 +1,33 @@
+---
+
+- name: Create log dir
+  file: state=directory path={{ ls_log_dir }} owner={{ ls_user }} group={{ ls_group }}
+
+- name: Create config Directory
+  file: state=directory path={{ ls_conf_dir }} owner={{ ls_user }} group={{ ls_group }}
+
+# Copy the logstash.sh
+- name: Copy logstash.sh File for Instance
+  template:
+    src=logstash.sh.j2
+    dest={{ ls_instance_home }}/logstash.sh
+    owner={{ ls_user }} group={{ ls_group }} mode=0655 force=yes
+
+- name: Logstash Input config
+  template:
+    src=conf.d/input.conf.j2
+    dest="{{ ls_conf_dir }}/input.conf"
+    owner={{ ls_user }} group={{ ls_group }} mode=0644
+
+- name: Logstash Filter config
+  template:
+    src=conf.d/filters.conf.j2
+    dest="{{ ls_conf_dir }}/filters.conf"
+    owner={{ ls_user }} group={{ ls_group }} mode=0644
+
+- name: Logstash Output config
+  template:
+    src=conf.d/output.conf.j2
+    dest="{{ ls_conf_dir }}/output.conf"
+    owner={{ ls_user }} group={{ ls_group }} mode=0644
+

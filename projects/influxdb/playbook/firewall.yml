@@ -1,0 +1,14 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+    - service: name=firewalld enabled=yes
+    - service: name=firewalld state=started
+
+    # Public Service
+    - firewalld: permanent=yes zone=public port=8000-10000/tcp state=enabled
+    - firewalld: permanent=yes zone=public port=18000-18999/tcp state=enabled
+    - firewalld: permanent=yes zone=public port=28000-28999/tcp state=enabled
+
+    - command: firewall-cmd --reload
+  become: yes
+  gather_facts: no

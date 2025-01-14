@@ -1,0 +1,75 @@
+# deployment yaml
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: gpushare-schd-extender
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: gpushare
+      component: gpushare-schd-extender
+      type: runtime
+  replicas: 3
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: gpushare
+        component: gpushare-schd-extender
+        type: runtime
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+    spec:
+      # hostNetwork: true
+      tolerations:
+      - effect: NoSchedule
+        operator: Exists
+        key: node-role.kubernetes.io/controlplane
+      - effect: NoSchedule
+        operator: Exists
+        key: node.kubernetes.io/unschedulable
+      - effect: NoExecute
+        operator: Exists
+        key: node-role.kubernetes.io/etcd
+      - effect: NoSchedule
+        operator: Exists
+        key: so-gpu
+      - effect: NoSchedule
+        operator: Exists
+        key: node.cloudprovider.kubernetes.io/uninitialized
+      nodeSelector:
+        node-role.kubernetes.io/controlplane: "true"
+      serviceAccount: gpushare-schd-extender
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: component
+                    operator: In
+                    values:
+                       - gpushare-schd-extender
+              topologyKey: "kubernetes.io/hostname"
+      containers:
+        - name: gpushare-schd-extender
+          {{- if .Values.pullImageByVPCNetwork }}
+          image: "{{ .Values.images.extender.image | replace "registry." "registry-vpc." }}:{{ .Values.images.extender.tag }}"
+          {{- else }}
+          image: "{{ .Values.images.extender.image }}:{{ .Values.images.extender.tag }}"
+          {{- end }}
+          imagePullPolicy: {{ .Values.images.extender.pullPolicy }}
+          env:
+          - name: LOG_LEVEL
+            value: info
+          - name: PORT
+            value: "12345"
+          resources:
+            limits:
+              memory: "750Mi"
+              cpu: "500m"
+            requests:
+              memory: "750Mi"
+              cpu: "500m"

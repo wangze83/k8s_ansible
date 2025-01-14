@@ -1,0 +1,8 @@
+---
+- hosts: "{{ dc }}"
+  remote_user: group
+  tasks:
+    - shell: echo "ok" > /s/www/status/magmadar
+  sudo: no
+  gather_facts: no
+

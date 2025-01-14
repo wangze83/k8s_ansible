@@ -1,0 +1,11 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+   # stop etcd
+   - service: name=etcd-{{ etcd_config['client-port'] }} state=stopped
+   # migrate data
+   - shell: ETCDCTL_API=3 {{ etcd_home }}/etcd/etcdctl migrate --data-dir={{ etcd_config['data-dir'] }}
+   # start etcd
+   - service: name=etcd-{{ etcd_config['client-port'] }} state=started
+  become: yes
+  gather_facts: yes

@@ -1,0 +1,74 @@
+################### Filebeat Configuration Example #########################
+
+############################# Filebeat ######################################
+filebeat:
+  # List of prospectors to fetch data.
+  prospectors:
+    -
+      paths:
+        - /var/log/containers/*
+      symlinks: true
+#     tail_files: true
+      encoding: plain
+      input_type: log
+      fields:
+        type: k8s-log
+        cluster: {{ filebeat_cluster }}
+        hostname: {{ ansible_nodename }}
+      fields_under_root: true
+      scan_frequency: 5s
+      max_bytes: 1048576        # 1M
+      harvester_buffer_size: 65536
+
+  # General filebeat configuration options
+  registry_file: /data/usr/filebeat/kube-filebeat.registry
+  spool_size: 10240             # N * bulk_max_size
+  idle_timeout: 5s
+
+############################# Libbeat Config ##################################
+# Base config file used by all other beats for using libbeat features
+
+############################# Processors ######################################
+processors:
+- decode_json_fields:
+    fields: ["message"]
+    target: ""
+- drop_fields:
+    fields: ["message", "beat", "input_type"]
+- add_wz_kubernetes_metadata:
+  # Default
+
+############################# Output ##########################################
+
+# Configure what outputs to use when sending the data collected by the beat.
+# Multiple outputs may be used.
+output:
+  kafka:
+    hosts: ["{{ filebeat_kafka|join('","') }}"]
+    worker: 4
+    version: "0.9.0.1"
+    topic: "k8s_docker_%{[deployment]}"
+  # partition.random:
+  #   group_events: 1
+  #   reachable_only: true
+  # partition.round_robin:
+  #   group_events: 1
+  #   reachable_only: true
+    partition.hash:
+      hash: ["pod"]
+      reachable_only: true
+    required_acks: 1
+    keep_alive: 10
+    compression: none
+    max_message_bytes: 1048576  # 1M
+    bulk_max_size: 2048
+    flush_interval: 5s
+    channel_buffer_size: 256
+
+  # console:
+    #pretty
+
+############################# Logging #########################################
+
+logging:
+  level: warning

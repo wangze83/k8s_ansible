@@ -1,0 +1,12 @@
+---
+- hosts: "{{ group }}"
+  serial: 50
+  tasks:
+    - shell: printf "%s - %s - %s - %s\n" $(hostname) "$(openssl x509  -noout -dates -in  /data/usr/certs/ca.pem | grep notAfter)" "$(hostname | xargs -I {} sh -c  'openssl x509  -noout -dates -in  /data/usr/certs/{}.pem | grep notAfter')" "$(openssl x509  -noout -dates -in  /data/usr/certs/kube-service-account.pem | grep notAfter)"
+      register: shell_result
+
+    - debug:
+        var: shell_result.stdout_lines
+
+  become: yes
+  gather_facts: yes

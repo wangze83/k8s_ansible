@@ -1,0 +1,11 @@
+# Flanneld configuration options
+
+# etcd url location.  Point this to the server where etcd runs
+FLANNEL_ETCD_ENDPOINTS="{{ flannel_etcd }}"
+
+# etcd config key.  This is the configuration key that flannel queries
+# For address range assignment
+FLANNEL_ETCD_PREFIX="/wz.cloud/network"
+
+# Any additional options that you want to pass
+FLANNEL_OPTIONS="-healthz-port=10257 --etcd-keyfile=/data/usr/certs/{{ inventory_hostname }}-key.pem --etcd-certfile=/data/usr/certs/{{ inventory_hostname }}.pem --etcd-cafile=/data/usr/certs/ca.pem --iface={{ iface }} --ip-masq=true"

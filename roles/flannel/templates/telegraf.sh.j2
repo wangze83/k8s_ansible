@@ -1,0 +1,97 @@
+#!/bin/sh
+#
+# Startup script for telegraf
+#
+
+. /etc/init.d/functions
+
+CONFIG={{ telegraf_config }}
+PIDFILE={{ telegraf_pid }}
+LOGFILE={{ telegraf_log }}
+
+DAEMON="{{ telegraf_home }}/telegraf"
+
+
+function log_failure_msg() {
+    echo "$@" "[ FAILED ]"
+}
+
+function log_success_msg() {
+    echo "$@" "[ OK ]"
+}
+
+start() {
+    if [ -e $PIDFILE ]; then
+        pidofproc -p $PIDFILE $DAEMON > /dev/null 2>&1 && status="0" || status="$?"
+        # If the status is SUCCESS then don't need to start again.
+        if [ "x$status" = "x0" ]; then
+            log_failure_msg "Telegraf process is running"
+            exit 0 # Exit
+        fi
+    fi
+
+    log_success_msg "Starting the process Telegraf"
+    nohup $DAEMON -config $CONFIG -pidfile $PIDFILE >>$LOGFILE 2>&1 &
+    RETVAL=$?
+    log_success_msg "Telegraf process was started"
+
+    return $RETVAL
+}
+
+stop() {
+    if [ -e $PIDFILE ]; then
+        pidofproc -p $PIDFILE $DAEMON > /dev/null 2>&1 && status="0" || status="$?"
+        if [ "$status" = 0 ]; then
+            if killproc -p $PIDFILE 15 && /bin/rm -rf $PIDFILE; then
+                log_success_msg "Telegraf process was stopped"
+            else
+                log_failure_msg "Telegraf failed to stop service"
+            fi
+        fi
+    else
+        log_failure_msg "Telegraf process is not running"
+    fi
+}
+
+test() {
+    $DAEMON -config $CONFIG -test
+}
+
+restart() {
+    test > /dev/null
+    RETVAL=$?
+    if [ $RETVAL -ne 0 ]; then
+        return $RETVAL
+    fi
+
+    stop
+    sleep 2
+    start
+}
+
+status() {
+    if [ -e $PIDFILE ]; then
+        if pidofproc -p $PIDFILE $DAEMON > /dev/null; then
+            log_success_msg "Telegraf Process is running"
+            exit 0
+        else
+            log_failure_msg "Telegraf Process is not running"
+            exit 1
+        fi
+    else
+        log_failure_msg "Telegraf Process is not running"
+        exit 3
+    fi
+}
+
+case "$1" in
+  start)   start;;
+  stop)    stop;;
+  restart) restart;;
+  test)    test;;
+  status)  status;;
+  *)       echo "Usage: $0 {start|stop|restart|test|status}"
+           RETVAL=2;;
+esac
+exit $RETVAL
+

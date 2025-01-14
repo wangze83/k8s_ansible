@@ -1,0 +1,14 @@
+Cmnd_Alias CMD_SEARCH = /usr/bin/pstack, \
+                        /usr/sbin/tcpdump, /bin/netstat, /bin/dropwatch, \
+                        /usr/bin/perf, /usr/bin/strace, /bin/sar, \
+                        /usr/sbin/lsof, /bin/htop, /usr/sbin/iotop, \
+                        /bin/systemctl restart telegraf, \
+                        /bin/systemctl restart kubelet, \
+                        /bin/systemctl restart kube-proxy, \
+                        /bin/systemctl restart docker, \
+                        /bin/docker ps, \
+                        /bin/docker stats, \
+                        /bin/docker info, \
+                        /bin/docker images
+
+search ALL= NOPASSWD: CMD_SEARCH

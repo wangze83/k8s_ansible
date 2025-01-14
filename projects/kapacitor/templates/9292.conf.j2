@@ -1,0 +1,138 @@
+# The hostname of this node.
+# Must be resolvable by any configured InfluxDB hosts.
+hostname = "{{ ansible_nodename }}"
+# Directory for storing a small amount of metadata about the server.
+data_dir = "{{ kapacitor['data_dir'] }}"
+
+[http]
+  # HTTP API Server for Kapacitor
+  # This server is always on,
+  # it servers both as a write endpoint
+  # and as the API endpoint for all other
+  # Kapacitor calls.
+  bind-address = "{{ kapacitor['http']['bind-address'] }}"
+  auth-enabled = true
+  log-enabled = true
+  write-tracing = false
+  pprof-enabled = false
+  https-enabled = false
+  https-certificate = "/etc/ssl/kapacitor.pem"
+
+[logging]
+    # Destination for logs
+    # Can be a path to a file or 'STDOUT', 'STDERR'.
+    file = "{{ kapacitor['logging']['file'] }}"
+    # Logging level can be one of:
+    # DEBUG, INFO, WARN, ERROR, or OFF
+    level = "INFO"
+
+[replay]
+  # Where to store replay files, aka recordings.
+  dir = "{{ kapacitor['replay']['dir'] }}"
+
+[storage]
+  # Where to store the Kapacitor boltdb database
+  boltdb = "{{ kapacitor['storage']['boltdb'] }}"
+
+
+# Multiple InfluxDB configurations can be defined.
+# Exactly one must be marked as the default.
+# Each one will be given a name and can be referenced in batch queries and InfluxDBOut nodes.
+[[influxdb]]
+  enabled = true
+  default = true
+  name = "gzst_8186"
+  urls = ["http://localhost:8186"]
+  username = "{{ influxdb['username'] }}"
+  password = "{{ influxdb['password'] }}"
+  timeout = "10s"
+  [influxdb.subscriptions]
+    so_com = ["400d"]
+  [influxdb.excluded-subscriptions]
+
+[smtp]
+  # Configure an SMTP email server
+  # Will use TLS and authentication if possible
+  # Only necessary for sending emails from alerts.
+  enabled = false
+  host = "localhost"
+  port = 25
+  username = ""
+  password = ""
+  # From address for outgoing mail
+  from = ""
+  # List of default To addresses.
+  # to = ["oncall@example.com"]
+
+  # Skip TLS certificate verify when connecting to SMTP server
+  no-verify = false
+  # Close idle connections after timeout
+  idle-timeout = "30s"
+
+  # If true the all alerts will be sent via Email
+  # without explicitly marking them in the TICKscript.
+  global = false
+  # Only applies if global is true.
+  # Sets all alerts in state-changes-only mode,
+  # meaning alerts will only be sent if the alert state changes.
+  state-changes-only = false
+
+[reporting]
+  # Send anonymous usage statistics
+  # every 12 hours to Enterprise.
+  enabled = false
+  url = "https://usage.influxdata.com"
+
+[stats]
+  # Emit internal statistics about Kapacitor.
+  # To consume these stats create a stream task
+  # that selects data from the configured database
+  # and retention policy.
+  #
+  # Example:
+  #  stream.from().database('_kapacitor').retentionPolicy('default')...
+  #
+  enabled = true
+  stats-interval = "10s"
+  database = "_kapacitor"
+  retention-policy= "autogen"
+
+[udf]
+# Configuration for UDFs (User Defined Functions)
+[udf.functions]
+    # Example go UDF.
+    # First compile example:
+    #   go build -o avg_udf ./udf/agent/examples/moving_avg.go
+    #
+    # Use in TICKscript like:
+    #   stream.goavg()
+    #           .field('value')
+    #           .size(10)
+    #           .as('m_average')
+    #
+    # uncomment to enable
+    #[udf.functions.goavg]
+    #   prog = "./avg_udf"
+    #   args = []
+    #   timeout = "10s"
+
+    # Example python UDF.
+    # Use in TICKscript like:
+    #   stream.pyavg()
+    #           .field('value')
+    #           .size(10)
+    #           .as('m_average')
+    #
+    # uncomment to enable
+    #[udf.functions.pyavg]
+    #   prog = "/usr/bin/python2"
+    #   args = ["-u", "./udf/agent/examples/moving_avg.py"]
+    #   timeout = "10s"
+    #   [udf.functions.pyavg.env]
+    #       PYTHONPATH = "./udf/agent/py"
+
+    # Example UDF over a socket
+    #[udf.functions.myCustomUDF]
+    #   socket = "/path/to/socket"
+    #   timeout = "10s"
+

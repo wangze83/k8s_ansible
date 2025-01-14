@@ -1,0 +1,9 @@
+---
+### calico step 1
+- hosts: "{{ group }}"
+  tasks:
+    - yum: name=lldpd state=latest
+    - service: name=lldpd enabled=yes
+    - service: name=lldpd state=started
+  become: yes
+  gather_facts: yes

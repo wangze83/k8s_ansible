@@ -1,0 +1,8 @@
+influxdb_release: influxdb-0.11.0-1
+influxdb_systemd:
+  name: influxdb
+  description: "InfluxDB is an open-source, distributed, time series database"
+  cpu-share: 1000
+  memory-limit: 16G
+influxdb_user: group
+influxdb_group: group

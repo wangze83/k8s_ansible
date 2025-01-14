@@ -1,0 +1,26 @@
+---
+
+- name: Create flannel dir
+  file: state=directory path={{ flannel_home }} owner={{ flannel_user }} group={{ flannel_group }} recurse=yes
+
+- copy:
+    src="releases/{{ flannel_bin }}"
+    dest="{{ flannel_home }}/{{ flannel_bin }}"
+    owner={{ flannel_user }} group={{ flannel_group }} mode=0755
+
+- file:
+    path="{{ flannel_home }}/flanneld"
+    src="{{ flannel_home }}/{{ flannel_bin }}"
+    owner={{ flannel_user }} group={{ flannel_group }} state=link
+
+- name: flanneld service config
+  template:
+    src=flanneld.service.j2
+    dest=/etc/systemd/system/flanneld.service
+    owner=root group=root
+
+- name: add docker service requires
+  file: path=/etc/systemd/system/docker.service.requires/flanneld.service src=/etc/systemd/system/flanneld.service state=link force=true
+
+- name: add docker service environment config
+  copy: src="flannel.conf" dest="/etc/systemd/system/docker.service.d/flannel.conf" owner=root group=root

@@ -1,0 +1,37 @@
+---
+#  sda                       8:0    0  1.1T  0 disk
+#  ├─sda1                    8:1    0    1G  0 part /boot
+#  └─sda2                    8:2    0  1.1T  0 part
+#  ├─VolGroup00-LogVol03 253:0    0   50G  0 lvm  /
+#  ├─VolGroup00-LogVol00 253:1    0 31.3G  0 lvm  [SWAP]
+#  ├─VolGroup00-LogVol02 253:2    0   10G  0 lvm  /var
+#  └─VolGroup00-LogVol01 253:3    0    2G  0 lvm  /tmp
+
+
+# SWAP
+- command: swapoff -a
+- lineinfile:
+    dest: /etc/fstab
+    state: present
+    regexp: '^(/dev/mapper/VolGroup00-LogVol00 swap.*)'
+    line: '#\1'
+    backrefs: yes
+
+# Path: /tmp
+- lvol: vg=VolGroup00 lv=LogVol01 size=50g
+- command: xfs_growfs /dev/VolGroup00/LogVol01
+# Path: /var
+- lvol: vg=VolGroup00 lv=LogVol02 size=150g
+- command: xfs_growfs /dev/VolGroup00/LogVol02
+# Path: /
+- lvol: vg=VolGroup00 lv=LogVol03 size=150g
+  ignore_errors: true
+- command: xfs_growfs /dev/VolGroup00/LogVol03
+# Path: /data
+- file: state=directory path=/data
+
+# Docker Data
+- lvol: vg=VolGroup00 lv=LogVol04 size=100%FREE shrink=no
+- filesystem: fstype=xfs dev=/dev/VolGroup00/LogVol04 opts="-n ftype=1"
+- file: state=directory path=/var/lib/docker
+- mount: name=/var/lib/docker src=/dev/VolGroup00/LogVol04 fstype=xfs opts="defaults,pquota" state=mounted

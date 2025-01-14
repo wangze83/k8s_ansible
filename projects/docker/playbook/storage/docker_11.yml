@@ -1,0 +1,39 @@
+---
+
+# 1.1T * 1
+# NAME                    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+# sda                       8:0    0  1.1T  0 disk
+# ├─sda1                    8:1    0    1G  0 part /boot
+# └─sda2                    8:2    0  1.1T  0 part
+#   ├─VolGroup00-LogVol03 253:0    0   20G  0 lvm  /
+#   ├─VolGroup00-LogVol00 253:1    0    4G  0 lvm  [SWAP]
+#   ├─VolGroup00-LogVol02 253:2    0    4G  0 lvm  /var
+#   └─VolGroup00-LogVol01 253:3    0    1G  0 lvm  /tmp
+
+- hosts: "{{ group }}"
+  tasks:
+    # Docker thin pool
+    - command: lvcreate -L 500g --thin VolGroup00/ThinPool00 --poolmetadatasize 256m
+
+    # SWAP
+    - command: swapoff -a
+    - lineinfile:
+        dest: /etc/fstab
+        state: present
+        regexp: '^(/dev/mapper/VolGroup00-LogVol00 swap.*)'
+        line: '#\1'
+        backrefs: yes
+
+    # Path: /tmp
+    - lvol: vg=VolGroup00 lv=LogVol01 size=20g
+    - command: xfs_growfs /dev/VolGroup00/LogVol01
+    # Path: /var
+    - lvol: vg=VolGroup00 lv=LogVol02 size=300g
+    - command: xfs_growfs /dev/VolGroup00/LogVol02
+    # Path: /
+    - lvol: vg=VolGroup00 lv=LogVol03 size=170g
+    - command: xfs_growfs /dev/VolGroup00/LogVol03
+    # Path: /data
+    - file: state=directory path=/data
+  become: yes
+  gather_facts: no

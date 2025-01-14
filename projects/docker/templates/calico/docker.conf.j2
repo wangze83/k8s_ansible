@@ -1,0 +1,16 @@
+[Service]
+LimitNOFILE=1048576
+LimitNPROC=1048576
+ExecStart=
+ExecStart=/usr/bin/dockerd \
+          --storage-driver=devicemapper \
+          --storage-opt dm.thinpooldev={{ docker_thinpooldev }} \
+          --storage-opt dm.use_deferred_removal=true \
+          --storage-opt dm.basesize=100G \
+          --log-opt max-size=4g \
+          --log-opt max-file=5 \
+          --seccomp-profile=/etc/docker/seccomp.json \
+          --bridge=none \
+          --ip-masq=false \
+          --iptables=false \
+          --selinux-enabled=false

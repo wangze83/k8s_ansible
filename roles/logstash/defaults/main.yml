@@ -1,0 +1,20 @@
+---
+ls_release: "2.2.2"
+ls_instance_home: "/data/usr"
+ls_instance_name: ""
+ls_user: group
+ls_group: group
+
+ls_home: "/data/usr/elasticsearch"
+ls_log_dir: "/data/log/elasticsearch"
+ls_pid_dir: "/data/var/run/elasticsearch"
+ls_heap_size: 1g
+
+ls_inputs:  ''
+ls_filters: ''
+ls_outputs: ''
+
+ls_plugins:
+
+
+

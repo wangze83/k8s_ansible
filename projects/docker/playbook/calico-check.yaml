@@ -1,0 +1,31 @@
+---
+### calico step 2
+
+# TODO: NAT tune. Move to somewhere else
+# # usage: --direct --add-rule { ipv4 | ipv6 | eb } <table> <chain> <priority> <args>
+# - command: firewall-cmd --direct --add-rule ipv4 nat POSTROUTING 0 -s 172.17.0.0/16 -d 10.1.1.1/18  -m mark ! --mark 0x4000/0x4000 -j ACCEPT
+
+- hosts: '{{ group }}'
+  serial: 15
+  become: yes
+  gather_facts: yes
+  vars:
+    iface: eth0
+  tasks:
+    - shell: "/usr/sbin/ethtool {{iface}} | grep Speed | awk '{print $2}'"
+      register: result
+      ignore_errors: yes
+    - set_fact:
+        iface: eth2
+      when: result.failed == True or result.stdout == 'Unknown!'
+    
+    - shell: "{{ calico_home }}/calico/bin/birdcl -s {{ calico_home }}/run/bird.ctl  show pro all | grep {{hostvars[inventory_hostname]['ansible_eth0']['ipv4']['address']}}"
+      register: result
+      failed_when: "'Source address' not in result['stdout']"
+      when: iface == 'eth0'
+      ignore_errors: true
+    - shell: "{{ calico_home }}/calico/bin/birdcl -s {{ calico_home }}/run/bird.ctl  show pro all | grep {{hostvars[inventory_hostname]['ansible_eth2']['ipv4']['address']}}"
+      register: result
+      failed_when: "'Source address' not in result['stdout']"
+      when: iface == 'eth2'
+      ignore_errors: true

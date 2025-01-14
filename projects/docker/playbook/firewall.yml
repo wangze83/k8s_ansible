@@ -1,0 +1,41 @@
+- command: modprobe br_netfilter
+  ignore_errors: yes
+
+- service: name=firewalld enabled=no
+- service: name=firewalld state=stopped
+
+#- lineinfile: dest=/etc/sysctl.d/99-sysctl.conf state=absent
+#    regexp="^net\.ipv6"
+- sysctl:
+    name: net.ipv4.ip_forward
+    value: 1
+    state: present
+  ignore_errors: true
+
+# SCP-397
+# - service: name=firewalld state=stopped
+# - yum: name=ipset-service,iptables-services state=absent
+# - copy: src=../files/iptables-1.4.21-24.1.scp.el7.centos.x86_64.rpm dest=/tmp
+# - yum: name=/tmp/iptables-1.4.21-24.1.scp.el7.centos.x86_64.rpm state=present
+# - service: name=firewalld state=restarted
+# SCP-397
+#- copy: src=../files/libipt_MASQUERADE.so-1.4.21-24.1.scp.el7.centos.x86_64 dest=/usr/lib64/xtables/libipt_MASQUERADE.so
+#- service: name=firewalld state=restarted
+
+# # Etcd
+# - firewalld: permanent=yes zone=public port=2379-2380/tcp state=enabled
+
+# Cluster
+#- firewalld: permanent=yes zone=trusted source='172.17.0.0/16' state=enabled
+
+#- firewalld: permanent=yes immediate=yes zone=trusted source='{{ item }}' state=enabled
+#  with_items: "{{ firewalld.trusted_sources }}"
+#- command: firewall-cmd --add-source='{{ item }}' --zone=trusted
+#  with_items: "{{ firewalld.trusted_sources }}"
+
+# - firewalld: permanent=yes immediate=yes zone=trusted source='{{ item }}' state=enabled
+#   with_items: "{{ firewalld.gluster_clients }}"
+# - command: firewall-cmd --add-source='{{ item }}' --zone=trusted
+#   with_items: "{{ firewalld.gluster_clients }}"
+
+#y- command: firewall-cmd --reload

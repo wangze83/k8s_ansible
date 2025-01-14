@@ -1,0 +1,14 @@
+etcd_release: etcd-v2.3.0-linux-amd64
+
+etcd_user: group
+etcd_group: group
+
+etcd_scheme: http
+etcd_cert:
+etcd_key:
+etcd_cert_auth: "false"
+etcd_peer_scheme: http
+etcd_peer_cert:
+etcd_peer_key:
+etcd_peer_cert_auth: "false"
+

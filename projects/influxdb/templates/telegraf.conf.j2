@@ -1,0 +1,123 @@
+# Telegraf Configuration
+
+[global_tags]
+{% for key in telegraf_influxdb['tags'] %}
+  {{ key }} = "{{ telegraf_influxdb['tags'][key] }}"
+{% endfor %}
+
+# Configuration for telegraf agent
+[agent]
+  ## Default data collection interval for all inputs
+  interval = "10s"
+  ## Rounds collection interval to 'interval'
+  ## ie, if interval="10s" then always collect on :00, :10, :20, etc.
+  round_interval = true
+
+  ## Telegraf will cache metric_buffer_limit metrics for each output, and will
+  ## flush this buffer on a successful write.
+  metric_buffer_limit = 1000
+  ## Flush the buffer whenever full, regardless of flush_interval.
+  flush_buffer_when_full = true
+
+  ## Collection jitter is used to jitter the collection by a random amount.
+  ## Each plugin will sleep for a random time within jitter before collecting.
+  ## This can be used to avoid many plugins querying things like sysfs at the
+  ## same time, which can have a measurable effect on the system.
+  collection_jitter = "0s"
+
+  ## Default flushing interval for all outputs. You shouldn't set this below
+  ## interval. Maximum flush_interval will be flush_interval + flush_jitter
+  flush_interval = "10s"
+  ## Jitter the flush interval by a random amount. This is primarily to avoid
+  ## large write spikes for users running a large number of telegraf instances.
+  ## ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
+  flush_jitter = "0s"
+
+  ## Run telegraf in debug mode
+  debug = false
+  ## Run telegraf in quiet mode
+  quiet = false
+  ## Override default hostname, if empty use os.Hostname()
+  hostname = ""
+
+
+#
+# OUTPUTS:
+#
+
+# Configuration for influxdb server to send metrics to
+[[outputs.influxdb]]
+  urls = ["{{ telegraf_influxdb['url'] }}"]
+  database = "{{ telegraf_influxdb['database'] }}"
+  retention_policy = "default"
+  precision = "s"
+  timeout = "5s"
+  username = "{{ telegraf_influxdb['username'] }}"
+  password = "{{ telegraf_influxdb['password'] }}"
+
+#
+# INPUTS:
+#
+
+# Read metrics about cpu usage
+[[inputs.cpu]]
+  ## Whether to report per-cpu stats or not
+  percpu = true
+  ## Whether to report total system cpu stats or not
+  totalcpu = true
+  ## Comment this line if you want the raw CPU time metrics
+  fielddrop = ["time_*"]
+
+# Read metrics about disk usage by mount point
+[[inputs.disk]]
+  ## By default, telegraf gather stats for all mountpoints.
+  ## Setting mountpoints will restrict the stats to the specified mountpoints.
+  # mount_points = ["/"]
+
+  ## Ignore some mountpoints by filesystem type. For example (dev)tmpfs (usually
+  ## present on /run, /var/run, /dev/shm or /dev).
+  ignore_fs = ["tmpfs", "devtmpfs"]
+
+# Read metrics about disk IO by device
+[[inputs.diskio]]
+  devices = ["sda", "memdiska"]
+
+
+[[inputs.influxdb]]
+  ## Works with InfluxDB debug endpoints out of the box,
+  ## but other services can use this format too.
+  ## See the influxdb plugin's README for more details.
+
+  ## Multiple URLs from which to read InfluxDB-formatted JSON
+  urls = [
+{% for port in telegraf_plugins['influxdb_groups'] %}
+    "http://localhost:{{ port }}/debug/vars",
+{% endfor %}
+  ]
+  namepass = ["influxdb_database", "influxdb_httpd", "influxdb_measurement", "influxdb_memstats"]
+
+
+# Get kernel statistics from /proc/stat
+[[inputs.kernel]]
+  # no configuration
+
+# Read metrics about memory usage
+[[inputs.mem]]
+  # no configuration
+
+# Read metrics about network interface usage
+[[inputs.net]]
+  ## By default, telegraf gathers stats from any up interface (excluding loopback)
+  ## Setting interfaces will tell it to gather these explicit interfaces,
+  ## regardless of status.
+  ##
+  # interfaces = ["eth0"]
+
+# Read TCP metrics such as established, time wait and sockets counts.
+[[inputs.netstat]]
+  # no configuration
+
+# Read metrics about system load & uptime
+[[inputs.system]]
+  namedrop = ["uptime_format"]
+

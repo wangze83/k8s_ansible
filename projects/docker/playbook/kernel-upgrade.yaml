@@ -1,0 +1,24 @@
+---
+- hosts: "{{ group }}"
+  vars:
+    kernel_version: 3.10.0-514.10.2.el7.ttm.x86_64
+  tasks:
+    #unarchive模块测试会失败 改成了解压命令执行
+    #- unarchive: src=../files/kernel-{{ kernel_version }}.tar.gz dest=/tmp creates=/tmp/x86_64
+    - copy: src=../files/kernel-{{ kernel_version }}.tar.gz dest=/tmp
+    - shell: cd /tmp/ && tar -xzvf kernel-{{ kernel_version }}.tar.gz
+    - yum: name=/tmp/x86_64/kernel-{{ kernel_version }}.rpm state=present
+    - yum: name=/tmp/x86_64/kernel-headers-{{ kernel_version }}.rpm state=present
+    - yum: name=/tmp/x86_64/kernel-devel-{{ kernel_version }}.rpm state=present
+
+  # - command: modprobe ttm_ipv4
+    - copy: src=../files/ttm.conf dest=/etc/modules-load.d/ mode=755
+  # - command: modprobe br_netfilter
+    - copy: src=../files/br_netfilter.conf dest=/etc/modules-load.d/ mode=755
+
+    - copy: src=../files/ceph-3.10.0-514.10.2.el7.ttm.x86_64.ko dest=/lib/modules/3.10.0-514.10.2.el7.ttm.x86_64/kernel/fs/ceph/ceph.ko
+
+    - selinux: policy=targeted state=disabled
+    - command: reboot
+  become: yes
+  gather_facts: yes

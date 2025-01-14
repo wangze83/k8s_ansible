@@ -1,0 +1,11 @@
+- name: 'modify selinux1'
+  lineinfile: 
+    path: /etc/selinux/config
+    regexp: ^SELINUX=.*
+    line: SELINUX=disabled
+
+- name: 'modify selinux2'
+  lineinfile: 
+    path: /etc/selinux/config
+    regexp: ^SELINUXTYPE=.*
+    line: SELINUXTYPE=targeted

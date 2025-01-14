@@ -1,0 +1,17 @@
+# env ANSIBLE_CONFIG
+[defaults]
+forks = 4
+
+# ask_pass = True
+# ask_sudo_pass = True
+# ask_vault_pass = True
+private_key_file = $ANSIBLE_ROOT/_keys/id_dsa.search
+vault_password_file = $ANSIBLE_ROOT/_keys/vault
+host_key_checking = False
+
+roles_path = $ANSIBLE_ROOT/roles
+
+pipelining = True
+hash_behaviour = merge
+
+remote_user = nobody

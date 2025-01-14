@@ -1,0 +1,15 @@
+---
+- hosts: "{{ group }}"
+  vars_files:
+    - inventory/vars/{{ group }}
+  roles:
+    - influxdb
+  tasks:
+    - name: InfluxDB config
+      template:
+        src="templates/{{ influxdb_conf_template }}"
+        dest="{{ influxdb_conf }}"
+        owner={{ influxdb_user }} group={{ influxdb_group }} mode=0644 force=yes
+      tags: configuration
+  become: yes
+  gather_facts: yes

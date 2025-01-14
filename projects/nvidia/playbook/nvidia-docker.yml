@@ -1,0 +1,11 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+    - lineinfile:
+        dest: /usr/lib/systemd/system/nvidia-docker.service
+        regexp: '^ExecStart=/usr/bin/nvidia-docker-plugin'
+        line: 'ExecStart=/usr/bin/nvidia-docker-plugin -s $SOCK_DIR -d /usr/local/nvidia-driver/'
+    - file: path="/usr/local/nvidia-driver" state=directory user=nvidia-docker group=nvidia-docker
+    - command: systemctl daemon-reload
+  become: yes
+  gather_facts: no

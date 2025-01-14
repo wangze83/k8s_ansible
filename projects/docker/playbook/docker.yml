@@ -1,0 +1,59 @@
+---
+- hosts: "{{ group }}"
+  vars:
+    #docker_rpm: docker-ce-17.03.2.ce-1.el7.centos.x86_64.rpm
+    docker_rpm: docker-ce-18.06.1.ce-3.el7.x86_64.rpm 
+    docker_selinux_rpm: container-selinux-2.68-1.el7.noarch.rpm 
+  # # (?) https://github.com/kubernetes/kubernetes/issues/40182
+    docker_thinpooldev: /dev/mapper/VolGroup00-ThinPool00
+  tasks:
+    - copy: src=../files/{{ docker_rpm }} dest=/tmp
+    - copy: src=../files/{{ docker_selinux_rpm }} dest=/tmp
+    - yum: name=/tmp/{{ docker_rpm }},/tmp/{{ docker_selinux_rpm }} state=present disable_gpg_check=yes
+
+  # - copy: src=../files/Docker.repo dest=/etc/yum.repos.d/
+  # - yum: name=docker-engine state=latest
+
+    - command: lvs VolGroup01/ThinPool00
+      register: result
+      ignore_errors: yes
+    - set_fact:
+        docker_thinpooldev: /dev/mapper/VolGroup01-ThinPool00
+      when: result is success
+
+    - file: path="/etc/systemd/system/docker.service.d" state=directory
+    - template: src=../templates/calico/docker-overlayfs.conf.j2 dest=/etc/systemd/system/docker.service.d/docker.conf
+   #- template: src=../templates/docker.conf.j2 dest=/etc/systemd/system/docker.service.d/docker.conf
+   # - template: src=../templates/calico/docker.conf.j2 dest=/etc/systemd/system/docker.service.d/docker.conf
+
+    - file: path="/etc/docker" state=directory
+    - copy: src=../files/seccomp.json dest=/etc/docker/seccomp.json
+    - copy: src=../files/daemon.json dest=/etc/docker/daemon.json
+
+    - command: systemctl daemon-reload
+    - service: name=docker enabled=yes
+    - service: name=docker state=started
+
+    # docker login wz.cloud
+    - file: path="/root/.docker" state=directory
+    - copy: src=../files/docker.config dest=/root/.docker/config.json
+    #- command: docker pull x.wz.net/rhel7/pod-infrastructure
+
+    # SWAP
+    - command: swapoff -a
+    - lineinfile:
+        dest: /etc/fstab
+        state: present
+        regexp: '^(/dev/mapper/VolGroup00-LogVol00 swap.*)'
+        line: '#\1'
+        backrefs: yes
+
+    # keyutils
+    - name: 批量安装keyutils为了mount cephfs
+      yum: name=keyutils state=latest
+    - name: 批量安装keyutils为了mount cephfs
+      shell: "keyctl clear $((16#$(sudo cat /proc/keys | grep .dns_resolver | awk '{print $1;}')))"
+      ignore_errors: yes
+
+  become: yes
+  gather_facts: no

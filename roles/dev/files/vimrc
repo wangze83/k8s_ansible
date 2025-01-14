@@ -1,0 +1,104 @@
+" General {
+    set nocompatible
+    set t_Co=256
+  " set mouse=a         " Automatically enable mouse usage
+    syntax on           " Syntax highlight
+    scriptencoding UTF-8
+    set viewoptions=folds,options,cursor,unix,slash     " Better Uinx/Windows compatibility
+    set history=40      " Command-line history number
+  " set spell           " Spell checking
+
+    " No sound on errors
+    set noerrorbells
+    set novisualbell
+
+    " Backup while file being written but no back file
+    set nobackup
+    set writebackup
+
+    " Force Django template html syntax
+  " autocmd FileType html :set syntax=htmldjango
+" }
+
+" UI {
+    " Ruler
+    if has('cmdline_info')
+      " set ruler
+      " set rulerformat=[%n:%04l,%03v]
+        set showcmd
+    endif
+
+    " Status Line
+    if has('statusline')
+        set laststatus=2        " Always show
+    endif
+
+    set cursorline          " Highlight current line
+  " set cursorcolumn
+    set backspace=indent,eol,start
+    set whichwrap+=<,>,h,l  " Backspace and cursor keys wrap to
+    set linespace=0         " No extra space between rows
+    set number              " Show line numbers
+    set showmatch           " Show matching brackets/parenthesis
+    set hlsearch            " Highlight search result
+  " set incsearch           " Find as you type search
+    set ignorecase          " Case insensitive search
+    set smartcase           " Case sensitive when upper case present
+    set wildmenu            " Command completion
+    set wildmode=list:longest,full      " Command completion mode
+    set scrolljump=3        " Lines to scroll when cursor leaves screen
+    set scrolloff=3         " Minimum lines to keep above and below cursor
+    set foldenable          " Auto fold code
+    set foldcolumn=2        " Fold mark columns
+    set foldmethod=indent   " Fold method
+    set list
+    set listchars=tab:>.,trail:+,extends:#,nbsp:.       " Highlight problematic whitespace
+" }
+
+" Key Mappings {
+    " Change map leader, default is '\'
+    let mapleader = ','
+
+    " Moving in tabs and windows
+    map <C-J> <C-W>j
+    map <C-K> <C-W>k
+    map <C-H> <C-W>h
+    map <C-L> <C-W>l
+
+    " Moving between buffers
+    map <C-B><C-N> :bn<CR>
+    map <C-B><C-P> :bp<CR>
+
+    " Completion
+    inoremap <C-O> <C-X><C-O>
+    inoremap <C-N> <C-X><C-N>
+    inoremap <C-P> <C-X><C-P>
+    inoremap <C-F> <C-X><C-F>
+    inoremap <C-K> <C-X><C-K>
+
+    " Clipboard
+    vnoremap <C-Y> "*Y
+    nnoremap <C-P> "*p
+
+    " Wrapped lines goes down/up to next row, rather than next line in file
+    nnoremap j gj
+    nnoremap k gk
+
+    " Clear highlighted search
+    nmap <silent> <F8> :nohlsearch<CR>
+" }
+
+" Formatting {
+    set wrap            " Wrap long lines
+    set expandtab       " Use spaces instead of tabs
+    set shiftwidth=4    " Use indents of 4 spaces
+    set softtabstop=4   " Number of spaces in editing operation
+    set tabstop=4       " Indentation length
+    set autoindent      " Indent at the same level of the previous line
+
+    " File type specific setting is in the after/ftplugin folder
+
+    " Remove trailing white spaces and ^M chars
+    autocmd FileType c,cpp,java,php,js,python autocmd BufWritePre <buffer> :call setline(1,map(getline(1,"$"),'substitute(v:val,"\\s\\+$","","")'))
+" }
+

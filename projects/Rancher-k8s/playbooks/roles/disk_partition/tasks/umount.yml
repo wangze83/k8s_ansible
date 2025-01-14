@@ -1,0 +1,36 @@
+- name: check docker is installed
+  shell: rpm -qa | grep docker-ce | wc -l
+  register: count
+
+- name: stop docker
+  service:
+    name: docker
+    state: stopped
+    enabled: false
+  when: count.stdout != "0"
+
+- name: umount /var/lib/docker
+  mount:
+    path: /var/lib/docker
+    state: absent
+    force: yes
+  loop: "{{ ansible_mounts }}"
+  when: item.mount == "/var/lib/docker"
+
+
+
+- name: remove old lvm
+  lvol:
+    vg: VolGroup01
+    lv: LogVol00
+    state: absent
+    force: yes
+  loop: "{{ ansible_mounts }}"
+  when: item.device == "/dev/mapper/VolGroup01-LogVol00"
+
+- name: remove old vg
+  lvg:
+    vg: VolGroup01
+    state: absent
+    force: yes
+  ignore_errors: true

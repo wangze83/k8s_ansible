@@ -1,0 +1,14 @@
+kind: Service 
+apiVersion: v1 
+metadata:
+  name: dcgm-exporter
+  namespace: gpu-operator-resources
+spec:
+  externalTrafficPolicy: Local
+  type: NodePort
+  selector:
+    wz-pmonitor-group: dcgm-exporter
+  ports:
+    - nodePort: 30094
+      port: 9400
+      targetPort: 9400

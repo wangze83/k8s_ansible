@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    deprecated.daemonset.template.generation: "2"
+  labels:
+    app: bird-exporter
+  name: bird-exporter
+  namespace: kube-system
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: bird-exporter
+  template:
+    metadata:
+      labels:
+        app: bird-exporter
+    spec:
+      containers:
+      - args:
+        - -format.new=true
+        - -bird.socket=/var/run/bird/bird.ctl
+        - -bird.ipv6=false
+        image: czerwonk/bird_exporter:v1.2.5
+        imagePullPolicy: IfNotPresent
+        name: bird-exporter
+        ports:
+        - containerPort: 9324
+          name: metrics
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 100m
+            memory: 32Mi
+          requests:
+            cpu: 100m
+            memory: 32Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/run/bird/
+          name: bird-socket
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+      volumes:
+      - hostPath:
+          path: /var/run/bird/
+          type: ""
+        name: bird-socket
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
+

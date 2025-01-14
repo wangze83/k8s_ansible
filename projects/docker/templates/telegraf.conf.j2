@@ -1,0 +1,211 @@
+# Telegraf Configuration
+# {{ ansible_managed }}
+
+[global_tags]
+{% for key in telegraf_tags %}
+  {{ key }} = "{{ telegraf_tags[key] }}"
+{% endfor %}
+
+# Configuration for telegraf agent
+[agent]
+  ## Default data collection interval for all inputs
+  interval = "10s"
+  ## Rounds collection interval to 'interval'
+  ## ie, if interval="10s" then always collect on :00, :10, :20, etc.
+  round_interval = true
+
+  ## Telegraf will send metrics to outputs in batches of at most
+  ## metric_batch_size metrics.
+  ## This controls the size of writes that Telegraf sends to output plugins.
+  metric_batch_size = 1000
+
+  ## For failed writes, telegraf will cache metric_buffer_limit metrics for each
+  ## output, and will flush this buffer on a successful write. Oldest metrics
+  ## are dropped first when this buffer fills.
+  ## This buffer only fills when writes fail to output plugin(s).
+  metric_buffer_limit = 10000
+
+  ## Collection jitter is used to jitter the collection by a random amount.
+  ## Each plugin will sleep for a random time within jitter before collecting.
+  ## This can be used to avoid many plugins querying things like sysfs at the
+  ## same time, which can have a measurable effect on the system.
+  collection_jitter = "0s"
+
+  ## Default flushing interval for all outputs. You shouldn't set this below
+  ## interval. Maximum flush_interval will be flush_interval + flush_jitter
+  flush_interval = "10s"
+  ## Jitter the flush interval by a random amount. This is primarily to avoid
+  ## large write spikes for users running a large number of telegraf instances.
+  ## ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
+  flush_jitter = "1s"
+
+  ## Run telegraf in debug mode
+  debug = false
+  ## Run telegraf in quiet mode
+  quiet = false
+  ## Override default hostname, if empty use os.Hostname()
+  hostname = ""
+
+
+#
+# OUTPUTS:
+#
+
+# Configuration for the Kafka server to send metrics to
+[[outputs.kafka]]
+  brokers = ["{{ telegraf_kafka['brokers']|join('", "') }}"]
+  topic = "{{ telegraf_kafka['topic'] }}"
+  routing_tag = "host"
+
+  ## CompressionCodec represents the various compression codecs recognized by
+  ## Kafka in messages.
+  ##  0 : No compression
+  ##  1 : Gzip compression
+  ##  2 : Snappy compression
+  compression_codec = 1
+
+  ##  RequiredAcks is used in Produce Requests to tell the broker how many
+  ##  replica acknowledgements it must see before responding
+  ##   0 : the producer never waits for an acknowledgement from the broker.
+  ##       This option provides the lowest latency but the weakest durability
+  ##       guarantees (some data will be lost when a server fails).
+  ##   1 : the producer gets an acknowledgement after the leader replica has
+  ##       received the data. This option provides better durability as the
+  ##       client waits until the server acknowledges the request as successful
+  ##       (only messages that were written to the now-dead leader but not yet
+  ##       replicated will be lost).
+  ##   -1: the producer gets an acknowledgement after all in-sync replicas have
+  ##       received the data. This option provides the best durability, we
+  ##       guarantee that no messages will be lost as long as at least one in
+  ##       sync replica remains.
+  required_acks = -1
+
+  max_retry = 3
+  data_format = "influx"
+
+
+#
+# INPUTS:
+#
+
+# Read metrics about cpu usage
+[[inputs.cpu]]
+  ## Whether to report per-cpu stats or not
+  percpu = true
+  ## Whether to report total system cpu stats or not
+  totalcpu = true
+  ## Comment this line if you want the raw CPU time metrics
+  fielddrop = ["time_*"]
+
+# Read metrics about disk usage by mount point
+[[inputs.disk]]
+  ## By default, telegraf gather stats for all mountpoints.
+  ## Setting mountpoints will restrict the stats to the specified mountpoints.
+  mount_points = ["/", "/var", "/tmp", "/data", "/var/lib/docker"]
+
+  ## Ignore some mountpoints by filesystem type. For example (dev)tmpfs (usually
+  ## present on /run, /var/run, /dev/shm or /dev).
+  ignore_fs = ["tmpfs", "devtmpfs", "devfs"]
+
+  tagdrop = ["device"]
+
+# Read metrics about disk IO by device
+[[inputs.diskio]]
+  devices = ["{{ ansible_devices|select('match', '^(?!dm-)')|join('", "') }}"]
+
+# Get kernel statistics from /proc/stat
+[[inputs.kernel]]
+  # no configuration
+
+# Read metrics about memory usage
+[[inputs.mem]]
+  # no configuration
+
+# Get the number of processes and group them by status
+[[inputs.processes]]
+  # no configuration
+
+# Read metrics about swap memory usage
+[[inputs.swap]]
+  # no configuration
+
+# Read metrics about network interface usage
+[[inputs.net]]
+  ## By default, telegraf gathers stats from any up interface (excluding loopback)
+  ## Setting interfaces will tell it to gather these explicit interfaces,
+  ## regardless of status.
+  ##
+  # interfaces = ["eth0"]
+  [inputs.net.tagdrop]
+      interface = ['veth*', 'cali*']
+
+# # Read TCP metrics such as established, time wait and sockets counts.
+[[inputs.netstat]]
+
+# Collects conntrack stats from the configured directories and files.
+[[inputs.conntrack]]
+  ## Superset of filenames to look for within the conntrack dirs.
+  ## Missing files will be ignored.
+  files = ["nf_conntrack_count", "nf_conntrack_max", "nf_conntrack_buckets"]
+
+  ## Directories to search within for the conntrack files above.
+  ## Missing directrories will be ignored.
+  dirs = ["/proc/sys/net/netfilter"]
+
+# Read metrics about system load & uptime
+[[inputs.system]]
+  fielddrop = ["uptime_format"]
+
+# Read metrics about docker containers
+[[inputs.docker]]
+  # Docker Endpoint
+  #   To use TCP, set endpoint = "tcp://[ip]:[port]"
+  #   To use environment variables (ie, docker-machine), set endpoint = "ENV"
+  endpoint = "unix:///var/run/docker.sock"
+  # Only collect metrics for these containers, collect all if empty
+  container_names = []
+
+  total = false
+
+  perdevice = false
+
+  docker_label_exclude = ["annotation.io.kubernetes.*"]
+  docker_label_include = ["annotation.io.kubernetes.container.restartCount"]
+
+[[inputs.exec]]
+    commands = ["python {{ telegraf_home }}/scripts/filebeat-stat.py"]
+    timeout = "1s"
+    data_format = "influx"
+
+[[inputs.exec]]
+    interval = '60s'
+    commands = ["python {{ telegraf_home }}/scripts/lvm.py"]
+    timeout = "1s"
+    data_format = "influx"
+
+[[inputs.exec]]
+    interval = '60s'
+    commands = ["sh {{ telegraf_home }}/scripts/lsmod.sh"]
+    timeout = "1s"
+    data_format = "influx"
+
+{% for interface in telegraf_plugins['pings'] %}
+[[inputs.ping]]
+    urls = ["{{ telegraf_plugins['pings'][interface]|join('", "') }}"]
+    count = 3
+    timeout = 3.0
+    interface = "{{ interface }}"
+
+{% endfor %}
+
+[[inputs.dns_query]]
+  domains = ["{{ telegraf_plugins['dns']['domains']|join('", "') }}"]
+  servers = ["{{ telegraf_plugins['dns']['servers']}}"]
+  record_type = "A"
+  timeout = 1
+
+{% for unit in telegraf_plugins['procstat'] %}
+[[inputs.procstat]]
+  systemd_unit = "{{ unit }}"
+
+{% endfor %}

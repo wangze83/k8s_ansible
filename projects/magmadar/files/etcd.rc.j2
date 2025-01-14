@@ -1,0 +1,10 @@
+export ETCD_NAME='{{ ansible_nodename }}'
+export ETCD_DATA_DIR='{{ etcd["data-dir"] }}'
+export ETCD_INITIAL_ADVERTISE_PEER_URLS='http://{{ ansible_eth0.ipv4.address }}:2380'
+export ETCD_LISTEN_PEER_URLS='http://{{ ansible_eth0.ipv4.address }}:2380'
+export ETCD_LISTEN_CLIENT_URLS='http://{{ ansible_eth0.ipv4.address }}:2379,http://127.0.0.1:2379'
+export ETCD_ADVERTISE_CLIENT_URLS='http://{{ ansible_eth0.ipv4.address }}:2379'
+export ETCD_INITIAL_CLUSTER_TOKEN='{{ etcd["token"] }}'
+export ETCD_INITIAL_CLUSTER='{{ etcd["cluster"] }}'
+export ETCD_INITIAL_CLUSTER_STATE='new'
+

@@ -1,0 +1,12 @@
+{% set network = hostvars[inventory_hostname]['ansible_' + iface]['ipv4']['network'] %}
+{% set netmask = hostvars[inventory_hostname]['ansible_' + iface]['ipv4']['netmask'] %}
+{% set net = network + '/' + netmask -%}
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: {{ hostvars[inventory_hostname]['ansible_' + iface]['ipv4']['address'] }}-{{ net | ipaddr('net') | ipaddr('1') | ipaddr('address') }}
+spec:                           
+  node: {{ ansible_nodename }}
+  peerIP: {{ net | ipaddr('net') | ipaddr('1') | ipaddr('address') }}
+  asNumber: {{ calico_as }}
+

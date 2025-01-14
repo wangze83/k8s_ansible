@@ -1,0 +1,63 @@
+---
+- hosts: "{{ group }}"
+  vars:
+   etcd_cert: /data/usr/etcd/certs/{{ inventory_hostname }}.pem
+   etcd_key: /data/usr/etcd/certs/{{ inventory_hostname }}-key.pem
+   etcd_peer_cert: /data/usr/etcd/certs/{{ inventory_hostname }}.pem
+   etcd_peer_key: /data/usr/etcd/certs/{{ inventory_hostname }}-key.pem
+  tasks:
+   # 手动添加etcd配置 vim /data/usr/etcd/etcd.rc
+   # ETCD_QUOTA_BACKEND_BYTES=8589934592
+   - name: Create etcd home
+     file: state=directory path={{ etcd_home }} owner={{ etcd_user }} group={{ etcd_group }} recurse=yes
+
+   - name: Create etcd data dir
+     file: state=directory path={{ etcd_config['data-dir'] }} owner={{ etcd_user }} group={{ etcd_group }} recurse=yes
+
+   # - unarchive:
+   #     src="releases/{{ etcd_release }}.tar.gz"
+   #     dest="{{ etcd_home }}"
+   #     creates="{{ etcd_home }}/{{ etcd_release }}"
+   - unarchive: src=../../files/{{ etcd_release }}.tar.gz dest={{ etcd_home }} creates={{ etcd_home }}/{{ etcd_release }}
+
+   - file:
+       path="{{ etcd_home }}/{{ etcd_release }}"
+       owner={{ etcd_user }} group={{ etcd_group }} recurse=yes
+
+   - file:
+       path="{{ etcd_home }}/etcd"
+       src="{{ etcd_home }}/{{ etcd_release }}"
+       owner={{ etcd_user }} group={{ etcd_group }} state=link
+
+   # - copy:
+   #     src=certs
+   #     dest="{{ etcd_home }}/"
+   #     owner=root group=root mode='u=rw,g=r,o=r'
+   - file: path={{ etcd_home }}/certs src=/data/usr/certs state=link force=true
+   - file: path={{ etcd_home }}/{{ etcd_release }} owner={{ etcd_user }} group={{ etcd_group }} recurse=yes
+
+   - template:
+       src="etcd.rc.j2"
+       dest="{{ etcd_home }}/etcd.rc"
+       owner={{ etcd_user }} group={{ etcd_group }}
+
+   - template:
+       src="etcd.sh.j2"
+       dest="{{ etcd_home }}/etcd.sh"
+       owner={{ etcd_user }} group={{ etcd_group }} mode=0755
+
+   - template:
+       src="etcd.service.j2"
+       dest=/etc/systemd/system/etcd-{{ etcd_config['client-port'] }}.service
+   - command: systemctl daemon-reload
+
+   # stop etcd
+   # - service: name=etcd-{{ etcd_config['client-port'] }} state=stopped
+   # backup etcd data
+   # - command: cp -rp {{ etcd_config['data-dir'] }} {{ etcd_config['data-dir'] }}-backup
+   # link file to etcd
+   - file: path={{ etcd_home }}/etcd src={{ etcd_home }}/{{ etcd_release }} owner={{ etcd_user }} group={{ etcd_group }} state=link
+   # start etcd
+   # - service: name=etcd-{{ etcd_config['client-port'] }} state=started
+  become: yes
+  gather_facts: yes

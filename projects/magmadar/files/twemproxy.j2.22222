@@ -1,0 +1,20 @@
+magmadar:
+  listen: 127.0.0.1:16378
+  redis: true
+  redis_auth: {{ twemproxy['redis_auth'] }}
+  hash: murmur
+  distribution: ketama
+  timeout: 1000
+  backlog: 10240
+  preconnect: true
+  auto_eject_hosts: true
+  server_connections: 1
+  server_retry_timeout: 30000
+  server_failure_limit: 3
+  servers:
+{% for host in groups[dc] %}
+{% for port in range(16380, 16380 + 8) %}
+  - {{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:{{ port }}:1
+{% endfor %}
+{% endfor %}
+

@@ -1,0 +1,65 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+    - name: 安装系统工具
+      yum: 
+        name: ack,htop,sysstat,mlocate,bash-completion,vim 
+        state: latest
+    - name: 安装系统组件
+      yum:
+        name: gcc,wget,libzip,bzip2,git,unzip,cscope,gitflow
+        state: latest
+    - name: 调整服务器配置
+      command: tuned-adm profile virtual-guest
+    - name: 避免升级内核
+      lineinfile: 
+        dest: /etc/yum.conf 
+        state: present
+        line: "exclude=kernel* centos-release* redhat-release*"
+    - name: 开启时间同步
+      yum: 
+        name: ntp 
+        state: latest
+    - name: 启用时间同步服务
+      service: 
+        name: ntpd 
+        enabled: yes
+    - name: 启动时间同步服务
+      service: 
+        name: ntpd 
+        state: started 
+    # - name: 安装docker-compose(如果代理失效，可以下载放到release进行拷贝)
+    #   get_url: 
+    #     url: "https://github.com/docker/compose/releases/download/1.14.0/docker-compose-Linux-x86_64"
+    #     dest: "/tmp"
+    #     use_proxy: yes
+    #   environment:
+    #     http_proxy: http://proxy.corp.wz.net:8080
+    # - name: 移动docker-compose-Linux-x86_64
+    #   command: mv /tmp/docker-compose-Linux-x86_64 /usr/bin/docker-compose
+    - name: 复制docker-compose的执行工具
+      copy: 
+        src: ../release/docker-compose-Linux-x86_64 
+        dest: /usr/bin/docker-compose
+    - name: 更新docker-compose命令权限
+      file: 
+        path: /usr/bin/docker-compose 
+        mode: 0755
+    - name: 复制login banner文件
+      copy: 
+        src: ../files/banners
+        dest: /etc/ssh/sshd-banner
+      tags: copy 
+    - name: 增加banner文件配置 
+      lineinfile:
+        dest: /etc/ssh/sshd_config
+        regexp: '^#Banner none'
+        line: "Banner /etc/ssh/sshd-banner"
+      tags: banner
+    - name: 重启sshd服务    
+      service: 
+        name: sshd 
+        state: restarted 
+      tags: banner
+  become: yes
+  gather_facts: no

@@ -1,0 +1,9 @@
+---
+- hosts: "{{ group }}"
+  serial: 5
+  tasks:
+    - make: 
+        chdir: "/usr/local/cuda/samples/1_Utilities/deviceQuery"
+    - command: "/usr/local/cuda/samples/1_Utilities/deviceQuery/deviceQuery"
+  become: yes
+  gather_facts: true

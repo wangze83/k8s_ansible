@@ -1,0 +1,16 @@
+---
+- hosts: "{{ dc }}"
+  remote_user: group
+  tasks:
+    # 创建服务目录
+    - file: path=/search/srv/magmadar-ng/releases state=directory mode=0744
+
+    # 同步配置
+    - copy:
+        src=../files/magmadar/supervisord.d/magmadar-ng.ini
+        dest=/search/local/etc/supervisord.d/magmadar-ng.ini
+        force=yes
+    - supervisorctl: name="magmadar-ng:" state=present
+    - supervisorctl: name="magmadar-ng-backup:" state=present
+  sudo: no
+  gather_facts: no

@@ -1,0 +1,8 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+    # docker login wz.cloud
+    - copy: src=../files/docker.config dest=/root/.docker/config.json
+    - command: docker pull x.wz.net/rhel7/pod-infrastructure
+  become: yes
+  gather_facts: no

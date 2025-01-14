@@ -1,0 +1,9 @@
+---
+- hosts: "{{ group }}"
+  serial: 5
+  tasks:
+    - name: reboot the machine
+      reboot:
+
+  become: yes
+  gather_facts: true

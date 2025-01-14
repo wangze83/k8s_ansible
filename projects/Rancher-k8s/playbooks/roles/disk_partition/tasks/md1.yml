@@ -1,0 +1,66 @@
+- name: stop old raid
+  shell: "cat /proc/mdstat | grep md | awk '{ print $1 }' | xargs -I hosts mdadm -S /dev/hosts"
+  tags:
+  - disk
+
+- name: clean raid information
+  shell: mdadm --misc --zero-superblock /dev/{{ item.key }}
+  with_dict: "{{ ansible_device_links.ids }}"
+  when:
+  - item.key | regex_search('^sd[b-z]$')
+  tags:
+  - disk
+
+- name: create VG
+  lvg:
+    vg: VolGroup01
+    pvs: "/dev/{{ item.key }}"
+  with_dict: "{{ ansible_device_links.ids }}"
+  when:
+  - item.key | regex_search('^sd[b-z]$')
+  tags:
+  - disk
+
+- name: add PV to VG
+  shell: vgextend VolGroup01 /dev/{{ item.key }}
+  with_dict: "{{ ansible_device_links.ids }}"
+  when:
+  - item.key | regex_search('^sd[b-z]$')
+  ignore_errors: true
+  tags:
+  - disk
+
+- name: create LV
+  lvol:
+    vg: VolGroup01
+    lv: LogVol00
+    state: present
+    size: 100%FREE
+  tags:
+  - disk
+
+- name: format filesystem
+  filesystem:
+    fstype: xfs
+    dev: /dev/VolGroup01/LogVol00
+    opts: '-n ftype=1'
+  tags:
+  - disk
+
+- name: create mount point
+  file:
+    state: directory
+    path: /var/lib/docker
+  tags:
+  - disk
+    
+- name: mount /var/lib/docker
+  mount:
+    src: /dev/VolGroup01/LogVol00
+    path: /var/lib/docker
+    fstype: xfs
+    opts: "defaults,pquota"
+    state: mounted
+  tags:
+  - disk
+#- include_tasks: 'common.yml'

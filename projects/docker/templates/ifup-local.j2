@@ -1,0 +1,60 @@
+#!/bin/sh
+
+IFACE=$1
+
+# RSS/RPS/XPS for NIC (eth1, flannel.1, etc...)
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/performance_tuning_guide/sect-red_hat_enterprise_linux-performance_tuning_guide-networking-configuration_tools#sect-Red_Hat_Enterprise_Linux-Performance_Tuning_Guide-Configuration_tools-Configuring_Receive_Flow_Steering_RFS
+# ENTRIES = /proc/sys/net/core/rps_sock_flow_entries / N
+{% for iface, config in network_scripts['interfaces'].items() %}
+if [[ "$IFACE" == "{{ iface }}" ]]; then
+{% if config.get('rss') %}
+    # RSS for VXLAN udp flow
+    # Multiplier of the indirection table size (-x)
+    ethtool -L {{ iface }} combined {{ config['combined_channel'] }}
+    ethtool -G {{ iface }} rx 512 tx 512
+    ethtool -N {{ iface }} rx-flow-hash udp4 sdfn
+{% endif %}
+
+{% if config.get('bind_nodes') %}
+    mask=0
+    for i in {{ config.get('bind_nodes')|join(' ') }}; do
+        m=$(sed 's/,//g' /sys/devices/system/node/node$i/cpumap)
+        mask=$(printf '%x' $((0x$m | 0x$mask)))
+    done
+    mask=$(echo $mask | rev | sed -r 's/(.{8})/\1,/g' | rev)
+{% else %}
+    [ -e /sys/class/net/$IFACE/device/numa_node ] && node=$(</sys/class/net/$IFACE/device/numa_node)
+    [ "$node" ] && [ "$node" -ge 0 ] || node=0
+    mask=$(</sys/devices/system/node/node$node/cpumap)
+{% endif %}
+
+{% if config.get('rps') %}
+    # RPS
+    for i in $(ls -vd /sys/class/net/$IFACE/queues/rx-*); do
+        i=${i/*rx-/}
+        printf "%s -> /sys/class/net/%s/queues/rx-%d/rps_cpus\n" $mask $IFACE $i
+        printf "%s" $mask > /sys/class/net/$IFACE/queues/rx-$i/rps_cpus
+    done
+{% endif %}
+
+{% if config.get('rfs') %}
+    # RFS
+    ENTRIES={{ (network_scripts['rps_sock_flow_entries'] / config['combined_channel'])|int }}
+    for i in $(ls -vd /sys/class/net/$IFACE/queues/rx-*); do
+        i=${i/*rx-/}
+        printf "%d -> /sys/class/net/%s/queues/rx-%d/rps_flow_cnt\n" $ENTRIES $IFACE $i
+        printf "%s" $ENTRIES > /sys/class/net/$IFACE/queues/rx-$i/rps_flow_cnt
+    done
+{% endif %}
+
+{% if config.get('xps') %}
+    # XPS
+    for i in $(ls -vd /sys/class/net/$IFACE/queues/tx-*); do
+        i=${i/*tx-/}
+        printf "%s -> /sys/class/net/%s/queues/tx-%d/xps_cpus\n" $mask $IFACE $i
+        printf "%s" $mask > /sys/class/net/$IFACE/queues/tx-$i/xps_cpus
+    done
+{% endif %}
+fi
+
+{% endfor %}

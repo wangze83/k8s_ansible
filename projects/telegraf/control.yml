@@ -1,0 +1,12 @@
+---
+- hosts: "{{ group }}"
+# vars_files:
+#   - inventory/vars/{{ group }}
+  remote_user: group
+  tasks:
+#   - command: "{{ telegraf_home }}/telegraf.sh {{ cmd }}"
+#   - command: pkill -f {{ telegraf_home }}/telegraf
+    - command: pkill -f /search/srv/telegraf-0.13.1/telegraf
+#   - command: rm /s/var/proc/telegraf.pid
+  become: no
+  gather_facts: no

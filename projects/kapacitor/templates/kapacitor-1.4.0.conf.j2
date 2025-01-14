@@ -1,0 +1,310 @@
+# The hostname of this node.
+# Must be resolvable by any configured InfluxDB hosts.
+hostname = "{{ ansible_nodename }}"
+# Directory for storing a small amount of metadata about the server.
+data_dir = "{{ kapacitor['data_dir'] }}"
+# Default retention-policy, if a write is made to Kapacitor and
+# it does not have a retention policy associated with it,
+# then the retention policy will be set to this value
+default-retention-policy = ""
+
+[http]
+  # HTTP API Server for Kapacitor
+  # This server is always on,
+  # it serves both as a write endpoint
+  # and as the API endpoint for all other
+  # Kapacitor calls.
+  bind-address = "{{ kapacitor['http']['bind-address'] }}"
+  auth-enabled = true
+  log-enabled = true
+  write-tracing = false
+  pprof-enabled = false
+  https-enabled = false
+  https-certificate = "/etc/ssl/kapacitor.pem"
+
+[config-override]
+  # Enable/Disable the service for overridding configuration via the HTTP API.
+  enabled = true
+
+[logging]
+    # Destination for logs
+    # Can be a path to a file or 'STDOUT', 'STDERR'.
+    file = "{{ kapacitor['logging']['file'] }}"
+    # Logging level can be one of:
+    # DEBUG, INFO, WARN, ERROR, or OFF
+    level = "INFO"
+
+[load]
+  # Enable/Disable the service for loading tasks/templates/handlers
+  # from a directory
+  enabled = true
+  # Directory where task/template/handler files are set
+  dir = "{{ kapacitor['load']['dir'] }}"
+
+
+[replay]
+  # Where to store replay files, aka recordings.
+  dir = "{{ kapacitor['replay']['dir'] }}"
+
+[task]
+  # Where to store the tasks database
+  # DEPRECATED: This option is not needed for new installations.
+  # It is only used to determine the location of the task.db file
+  # for migrating to the new `storage` service.
+  dir = "{{ kapacitor['task']['dir'] }}"
+  # How often to snapshot running task state.
+  snapshot-interval = "60s"
+
+[storage]
+  # Where to store the Kapacitor boltdb database
+  boltdb = "{{ kapacitor['storage']['boltdb'] }}"
+
+[deadman]
+  # Configure a deadman's switch
+  # Globally configure deadman's switches on all tasks.
+  # NOTE: for this to be of use you must also globally configure at least one alerting method.
+  global = false
+  # Threshold, if globally configured the alert will be triggered if the throughput in points/interval is <= threshold.
+  threshold = 0.0
+  # Interval, if globally configured the frequency at which to check the throughput.
+  interval = "10s"
+{% raw %}
+  # Id -- the alert Id, NODE_NAME will be replaced with the name of the node being monitored.
+  id = "node 'NODE_NAME' in task '{{ .TaskName }}'"
+  # The message of the alert. INTERVAL will be replaced by the interval.
+  message = "{{ .ID }} is {{ if eq .Level \"OK\" }}alive{{ else }}dead{{ end }}: {{ index .Fields \"collected\" | printf \"%0.3f\" }} points/INTERVAL."
+{% endraw %}
+
+
+# Multiple InfluxDB configurations can be defined.
+# Exactly one must be marked as the default.
+# Each one will be given a name and can be referenced in batch queries and InfluxDBOut nodes.
+[[influxdb]]
+  # Connect to an InfluxDB cluster
+  # Kapacitor can subscribe, query and write to this cluster.
+  # Using InfluxDB is not required and can be disabled.
+  enabled = true
+  default = true
+  name = "idc_8386"
+  urls = ["http://localhost:8386"]
+  username = "fanxiaokai"
+  password = "cTFmFJtrR7zhmq0U"
+  timeout = "10s"
+  # Absolute path to pem encoded CA file.
+  # A CA can be provided without a key/cert pair
+  #   ssl-ca = "/etc/kapacitor/ca.pem"
+  # Absolutes paths to pem encoded key and cert files.
+  #   ssl-cert = "/etc/kapacitor/cert.pem"
+  #   ssl-key = "/etc/kapacitor/key.pem"
+
+  # Do not verify the TLS/SSL certificate.
+  # This is insecure.
+  insecure-skip-verify = false
+
+  # Maximum time to try and connect to InfluxDB during startup
+  startup-timeout = "5m"
+
+  # Turn off all subscriptions
+  disable-subscriptions = false
+
+  # Subscription mode is either "cluster" or "server"
+  subscription-mode = "cluster"
+
+  # Which protocol to use for subscriptions
+  # one of 'udp', 'http', or 'https'.
+  subscription-protocol = "http"
+
+  # Subscriptions resync time interval
+  # Useful if you want to subscribe to new created databases
+  # without restart Kapacitord
+  subscriptions-sync-interval = "1m0s"
+
+  # Override the global hostname option for this InfluxDB cluster.
+  # Useful if the InfluxDB cluster is in a separate network and
+  # needs special config to connect back to this Kapacitor instance.
+  # Defaults to `hostname` if empty.
+  kapacitor-hostname = ""
+
+  # Override the global http port option for this InfluxDB cluster.
+  # Useful if the InfluxDB cluster is in a separate network and
+  # needs special config to connect back to this Kapacitor instance.
+  # Defaults to the port from `[http] bind-address` if 0.
+  http-port = 0
+
+  # Host part of a bind address for UDP listeners.
+  # For example if a UDP listener is using port 1234
+  # and `udp-bind = "hostname_or_ip"`,
+  # then the UDP port will be bound to `hostname_or_ip:1234`
+  # The default empty value will bind to all addresses.
+  udp-bind = ""
+  # Subscriptions use the UDP network protocl.
+  # The following options of for the created UDP listeners for each subscription.
+  # Number of packets to buffer when reading packets off the socket.
+  udp-buffer = 1000
+  # The size in bytes of the OS read buffer for the UDP socket.
+  # A value of 0 indicates use the OS default.
+  udp-read-buffer = 0
+
+  [influxdb.subscriptions]
+    # Set of databases and retention policies to subscribe to.
+    # If empty will subscribe to all, minus the list in
+    # influxdb.excluded-subscriptions
+    #
+    # Format
+    # db_name = <list of retention policies>
+    #
+    # Example:
+    # my_database = [ "default", "longterm" ]
+
+  [influxdb.excluded-subscriptions]
+    # Set of databases and retention policies to exclude from the subscriptions.
+    # If influxdb.subscriptions is empty it will subscribe to all
+    # except databases listed here.
+    #
+    # Format
+    # db_name = <list of retention policies>
+    #
+    # Example:
+    # my_database = [ "default", "longterm" ]
+
+[kubernetes]
+  # Enable/Disable the kubernetes service.
+  # Needed by the k8sAutoscale TICKscript node.
+  enabled = false
+  # There are several ways to connect to the kubernetes API servers:
+  #
+  # Via the proxy, start the proxy via the `kubectl proxy` command:
+  #   api-servers = ["http://localhost:8001"]
+  #
+  # From within the cluster itself, in which case
+  # kubernetes secrets and DNS services are used
+  # to determine the needed configuration.
+  #   in-cluster = true
+  #
+  # Direct connection, in which case you need to know
+  # the URL of the API servers,  the authentication token and
+  # the path to the ca cert bundle.
+  # These value can be found using the `kubectl config view` command.
+  #   api-servers = ["http://192.168.99.100:8443"]
+  #   token = "..."
+  #   ca-path = "/path/to/kubernetes/ca.crt"
+  #
+  # Kubernetes can also serve as a discoverer for scrape targets.
+  # In that case the type of resources to discoverer must be specified.
+  # Valid values are: "node", "pod", "service", and "endpoint".
+  #   resource = "pod"
+
+
+
+[smtp]
+  # Configure an SMTP email server
+  # Will use TLS and authentication if possible
+  # Only necessary for sending emails from alerts.
+  enabled = false
+  host = "localhost"
+  port = 25
+  username = ""
+  password = ""
+  # From address for outgoing mail
+  from = ""
+  # List of default To addresses.
+  # to = ["oncall@example.com"]
+
+  # Skip TLS certificate verify when connecting to SMTP server
+  no-verify = false
+  # Close idle connections after timeout
+  idle-timeout = "30s"
+
+  # If true the all alerts will be sent via Email
+  # without explicitly marking them in the TICKscript.
+  global = false
+  # Only applies if global is true.
+  # Sets all alerts in state-changes-only mode,
+  # meaning alerts will only be sent if the alert state changes.
+  state-changes-only = false
+
+[reporting]
+  # Send usage statistics
+  # every 12 hours to Enterprise.
+  enabled = false
+  url = "https://usage.influxdata.com"
+
+[stats]
+  # Emit internal statistics about Kapacitor.
+  # To consume these stats create a stream task
+  # that selects data from the configured database
+  # and retention policy.
+  #
+  # Example:
+  #  stream|from().database('_kapacitor').retentionPolicy('autogen')...
+  #
+  enabled = true
+  stats-interval = "10s"
+  database = "_kapacitor"
+  retention-policy= "autogen"
+
+[udf]
+# Configuration for UDFs (User Defined Functions)
+[udf.functions]
+    # Example go UDF.
+    # First compile example:
+    #   go build -o avg_udf ./udf/agent/examples/moving_avg.go
+    #
+    # Use in TICKscript like:
+    #   stream.goavg()
+    #           .field('value')
+    #           .size(10)
+    #           .as('m_average')
+    #
+    # uncomment to enable
+    #[udf.functions.goavg]
+    #   prog = "./avg_udf"
+    #   args = []
+    #   timeout = "10s"
+
+    # Example python UDF.
+    # Use in TICKscript like:
+    #   stream.pyavg()
+    #           .field('value')
+    #           .size(10)
+    #           .as('m_average')
+    #
+    # uncomment to enable
+    #[udf.functions.pyavg]
+    #   prog = "/usr/bin/python2"
+    #   args = ["-u", "./udf/agent/examples/moving_avg.py"]
+    #   timeout = "10s"
+    #   [udf.functions.pyavg.env]
+    #       PYTHONPATH = "./udf/agent/py"
+
+    # Example UDF over a socket
+    #[udf.functions.myCustomUDF]
+    #   socket = "/path/to/socket"
+    #   timeout = "10s"
+
+# Service Discovery and metric scraping
+
+[[scraper]]
+  enabled = false
+  name = "myscraper"
+  # Specify the id of a discoverer service specified below
+  discoverer-id = ""
+  # Specify the type of discoverer service being used.
+  discoverer-service = ""
+  db = "prometheus_raw"
+  rp = "autogen"
+  type = "prometheus"
+  scheme = "http"
+  metrics-path = "/metrics"
+  scrape-interval = "1m0s"
+  scrape-timeout = "10s"
+  username = ""
+  password = ""
+  bearer-token = ""
+  ssl-ca = ""
+  ssl-cert = ""
+  ssl-key = ""
+  ssl-server-name = ""
+  insecure-skip-verify = false
+
+

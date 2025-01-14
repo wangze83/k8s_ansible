@@ -1,0 +1,18 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+    # Path: /tmp
+    - lvol: vg=VolGroup00 lv=LogVol01 size=20g
+    - command: xfs_growfs /dev/VolGroup00/LogVol01
+    # Path: /var
+    - lvol: vg=VolGroup00 lv=LogVol02 size=100g
+    - command: xfs_growfs /dev/VolGroup00/LogVol02
+    # Path: /
+    - lvol: vg=VolGroup00 lv=LogVol03 size=150g
+    - command: xfs_growfs /dev/VolGroup00/LogVol03
+
+#   - filesystem: fstype=xfs dev=/dev/memdiska
+#   - mount: name=/data src=/dev/memdiska fstype=xfs opts="defaults" state=mounted
+    - file: path=/data src=/da2 state=link force=true
+  become: yes
+  gather_facts: no

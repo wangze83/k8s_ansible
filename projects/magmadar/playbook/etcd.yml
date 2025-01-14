@@ -1,0 +1,32 @@
+---
+- hosts: "{{ dc }}"
+  remote_user: group
+  vars:
+    assets_path: ../files
+  tasks:
+    # 安装服务
+    - file: path=/search/srv/etcd state=directory mode=0744
+    - synchronize:
+        src={{ assets_path }}/etcd
+        dest=/search/srv/
+        checksum=yes
+    - unarchive:
+        src=/search/srv/etcd/etcd-v2.2.0-linux-amd64.tar.gz
+        dest=/search/srv/etcd/
+        copy=no
+    - file:
+        path=/search/srv/etcd/etcd
+        src=/search/srv/etcd/etcd-v2.2.0-linux-amd64
+        state=link
+
+    # 同步配置
+    - template:
+        src={{ assets_path }}/magmadar/etcd.rc.j2
+        dest=/search/srv/etcd/etcd.rc
+
+    # 服务启动
+    - command: sh etcd-proxy.sh restart
+        chdir=/search/srv/etcd
+  sudo: no
+  gather_facts: yes
+

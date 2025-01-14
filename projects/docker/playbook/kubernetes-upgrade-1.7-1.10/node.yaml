@@ -1,0 +1,29 @@
+---
+- hosts: "{{ group }}"
+  vars:
+    k8s_version: 1.10.8
+# serial: 1
+  tasks:
+    # 手动驱逐node节点Pod，准备升级
+    # kubectl drain (nodeName)  --force --delete-local-data --ignore-daemonsets
+
+  # # CNI
+  # - copy: src=../../files/network-plugins-0.6.0 dest={{ kube_home }}/ owner={{ kube_user }} group={{ kube_group }} mode=755
+  # - file: path={{ kube_home }}/network-plugins src={{ kube_home }}/network-plugins-0.6.0 owner={{ kube_user }} group={{ kube_group }} state=link
+  # - copy: src=../../files/net.d dest={{ kube_home }}/ owner={{ kube_user }} group={{ kube_group }}
+
+    # copy kubernetes node file
+    - unarchive: src=../../files/kubernetes-{{ k8s_version }}.tar.gz dest={{ kube_home }} creates={{ kube_home }}/kubernetes-{{ k8s_version }}
+    - file: path={{ kube_home }}/kubernetes-{{ k8s_version }} owner={{ kube_user }} group={{ kube_group }} recurse=yes
+    - file: path={{ kube_home }}/kubernetes src={{ kube_home }}/kubernetes-{{ k8s_version }} owner={{ kube_user }} group={{ kube_group }} state=link
+    # update kubelet config
+    - template: src=../../templates/kubelet.j2 dest={{ kube_home }}/cfg/kubelet owner={{ kube_user }} group={{ kube_group }}
+    - template: src=../../templates/kubelet.service.j2 dest=/etc/systemd/system/kubelet.service owner={{ kube_user }} group={{ kube_group }}
+    - command: systemctl daemon-reload
+    - command: systemctl restart kubelet
+    - command: systemctl restart kube-proxy
+
+    - service: name=kube-proxy enabled=yes
+    - service: name=kubelet enabled=yes
+  become: yes
+  gather_facts: yes

@@ -1,0 +1,108 @@
+{{- if .Values.schedulerConfig.autoConfigScheduler }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gpushare-installer
+  namespace: kube-system
+  labels:
+    app: gpushare
+    name: gpushare-installer
+    chart: {{ template "gpushare-installer.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  parallelism: {{ .Values.masterCount }}
+  template:
+    metadata:
+      labels: 
+        chart: {{ template "gpushare-installer.chart" . }}
+        release: {{ .Release.Name }}
+        heritage: {{ .Release.Service }}
+        app: gpushare
+        name: gpushare-installer
+    spec:
+      hostNetwork: true
+      tolerations:
+      - key: ""
+        operator: "Exists"
+      nodeSelector:
+         node-role.kubernetes.io/controlplane: "true"
+      restartPolicy: OnFailure
+      containers:
+      - name: vgpu-tool
+        {{- if .Values.pullImageByVPCNetwork }}
+        image: "{{ .Values.images.kubectlInspectVGPU.image | replace "registry." "registry-vpc." }}:{{ .Values.images.kubectlInspectVGPU.tag }}"
+        {{- else }}
+        image: "{{ .Values.images.kubectlInspectVGPU.image }}:{{ .Values.images.kubectlInspectVGPU.tag }}"
+        {{- end }}
+        imagePullPolicy: {{ .Values.images.kubectlInspectVGPU.pullPolicy }}
+        command: ["bash","/root/run.sh"]
+        volumeMounts:
+        - name: bin
+          mountPath: /host/bin
+      - name: deploy-schd
+        {{- if .Values.pullImageByVPCNetwork }}
+        image: "{{ .Values.images.installer.image | replace "registry." "registry-vpc." }}:{{ .Values.images.installer.tag }}"
+        {{- else }}
+        image: "{{ .Values.images.installer.image }}:{{ .Values.images.installer.tag }}"
+        {{- end }}
+        imagePullPolicy: {{ .Values.images.installer.pullPolicy }}
+        securityContext:
+          privileged: true
+        command: ["python","update.py"]
+        env:
+        {{- if .Values.schedulerConfig.schedulerStaticPodYaml }}
+          - name: SCHEDULER_STATIC_POD_YAML
+            value: {{ .Values.shcedulerConfig.schedulerStaticPodYaml }}
+        {{- end }}
+        {{- if .Values.schedulerConfig.fileName }}
+          - name: CONFIG_FILE_NAME
+            value: {{ .Values.schedulerConfig.fileName }}
+        {{- end }}
+        {{- if .Values.schedulerConfig.image }}
+          - name: IMAGE
+            value: {{ .Values.schedulerConfig.image }}
+        {{- end }}
+        {{- if .Values.schedulerConfig.type }}
+          - name: CONFIG_TYPE
+            value: {{ .Values.schedulerConfig.type }}
+        {{- end }}
+        {{- if .Values.schedulerConfig.extenderPort }}
+          - name: EXTENDER_PORT
+            value: "{{ .Values.schedulerConfig.extenderPort }}"
+        {{- end }}
+          - name: NODE_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+        volumeMounts:
+        - name: kube-dir
+          mountPath: /etc/kubernetes
+        - name: scheduler-config
+          mountPath: /usr/local/config
+        - name: bin
+          mountPath: /host/bin
+      volumes:
+      - hostPath:
+          path: /etc/kubernetes
+          type: Directory
+        name: kube-dir
+      - hostPath:
+          path: /usr/local/bin
+          type: Directory
+        name: bin
+      - configMap:
+          name: gpushare-installer-cm
+        name: scheduler-config
+
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: name
+                    operator: In
+                    values:
+                       - gpushare-installer
+              topologyKey: "kubernetes.io/hostname"
+{{- end }}

@@ -1,0 +1,12 @@
+{{- if .Values.schedulerConfig.autoConfigScheduler }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gpushare-installer-cm
+  namespace: kube-system
+data:
+{{-  if .Values.schedulerConfig.fileName }}
+  {{ .Values.schedulerConfig.fileName }}: |
+{{ ( .Files.Get .Values.schedulerConfig.fileName ) | printf "%s" | indent 6 }}
+{{- end }}
+{{- end }}

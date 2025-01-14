@@ -1,0 +1,15 @@
+- name: add node {{ inventory_hostname }}
+  shell: docker run -d --privileged --restart=unless-stopped --net=host -v /etc/kubernetes:/etc/kubernetes -v /var/run:/var/run harbor.wz.cn/rancher/rancher-agent:v2.5.0 --server https://k8s.wz.net:8wz --token {{ item.value }} --worker --node-name $(hostname)
+  with_dict: "{{ web_tokens }}"
+  when: item.key == "{{ cluster }}"
+
+
+- name: "node has active"
+  shell: /usr/local/bin/kubectl get node {{ inventory_hostname }} | awk 'NR >= 2 { print $2 }'
+  delegate_to: 127.0.0.1
+  become: false
+  register: status
+  until: status.stdout == "Ready"
+  retries: 100
+  delay: 20
+

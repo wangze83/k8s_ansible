@@ -1,0 +1,94 @@
+---
+- hosts: "{{ group }}"
+  serial: 5
+  vars:
+    disk_model: none
+  tasks:
+    - include_tasks: "da1-remove.yaml"
+    ## 确定磁盘类型
+    - name: Storage partition md127
+      set_fact:
+        disk_model: md127
+      when:
+        #- ansible_devices['md127'] is defined
+        - ansible_devices['sdb'] is defined
+        - ansible_devices['sdc'] is defined
+        - ansible_devices['sdb'] is defined
+        - ansible_devices['sde'] is defined
+        - ansible_devices['sdf'] is defined
+    - name: Storage partition md125
+      set_fact:
+        disk_model: md125
+      when:
+        - ansible_devices['sda'] is defined
+        - ansible_devices['sdb'] is defined
+        - ansible_devices['sdc'] is defined
+        - ansible_devices['sdf'] is defined
+        - ansible_devices['sdg'] is defined
+        - ansible_devices['sdh'] is defined
+
+    - name: Storage partition docker11
+      set_fact:
+        disk_model: docker11
+      when:
+        - ansible_devices['sda'] is defined
+        - ansible_devices['sdb'] is not defined
+
+    - name: Storage partition docker37
+      set_fact:
+        disk_model: docker37
+      when:
+        - ansible_devices['sda'] is defined
+        - ansible_devices['sdb'] is defined
+        - ansible_devices['sdd'] is not defined
+
+    - name: Storage partition docker21
+      set_fact:
+        disk_model: docker21
+      when:
+        - ansible_devices['sda'] is defined
+        - ansible_devices['sdb'] is defined
+        - ansible_devices['sdc'] is defined
+        - ansible_devices['sdd'] is not defined
+        - ansible_devices['sde'] is not defined
+        - ansible_devices['sdf'] is not defined
+
+    - name: Storage partition memdiska
+      set_fact:
+        disk_model: memdiska
+      when:
+        - ansible_devices['sda'] is defined
+        - ansible_devices['memdiska'] is defined
+        - ansible_devices['sdb'] is not defined
+
+    - name: Storage partition nvme0n1
+      set_fact:
+        disk_model: nvme0n1
+      when:
+        - ansible_devices['sda'] is defined
+        - ansible_devices['nvme0n1'] is defined
+        - ansible_devices['sdb'] is not defined
+
+    - name: 'Check parm valid'
+      fail: msg="Storage partition is not valid {{disk_model}}"
+      when: disk_model == "none"
+
+    ## storage 执行相应的磁盘分区
+    - service: name=docker state=stopped
+      ignore_errors: yes
+    - include_tasks: "storage-overlayfs/md127.yml"
+      when: disk_model == "md127"
+    - include_tasks: "storage-overlayfs/docker_11_17.yml"
+      when: disk_model == "docker11"
+    - include_tasks: "storage-overlayfs/docker_37.yml"
+      when: disk_model == "docker37"
+    - include_tasks: "storage-overlayfs/docker_21.yml"
+      when: disk_model == "docker21"
+    - include_tasks: "storage-overlayfs/memdisk.yml"
+      when: disk_model == "memdiska"
+    - include_tasks: "storage-overlayfs/nvme.yml"
+      when: disk_model == "nvme0n1"
+    - include_tasks: "storage-overlayfs/md125.yml"
+      when: disk_model == "md125"
+  become: yes
+  gather_facts: true

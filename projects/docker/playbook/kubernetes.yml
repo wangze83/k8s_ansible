@@ -1,0 +1,82 @@
+- yum: name=conntrack-tools state=latest
+- set_fact:
+    kubelet_client_certificate: "{{ kube_home }}/certs/{{ inventory_hostname }}.pem"
+- set_fact:
+    kubelet_client_key: "{{ kube_home }}/certs/{{ inventory_hostname }}-key.pem"
+- set_fact:
+    kubeproxy_client_certificate: "{{ kube_home }}/certs/{{ inventory_hostname }}.pem"
+- set_fact:
+    kubeproxy_client_key: "{{ kube_home }}/certs/{{ inventory_hostname }}-key.pem"
+- block:
+    - set_fact:
+        kubelet_client_certificate: "{{ kube_home }}/certs/system_node_{{ inventory_hostname }}.pem"
+    - set_fact:
+        kubelet_client_key: "{{ kube_home }}/certs/system_node_{{ inventory_hostname }}-key.pem"
+    - set_fact:
+        kubeproxy_client_certificate: "{{ kube_home }}/certs/system_kube-proxy.pem"
+    - set_fact:
+        kubeproxy_client_key: "{{ kube_home }}/certs/system_kube-proxy-key.pem"
+  when: rbac
+
+- file: path={{ kube_home }} owner={{ kube_user }} group={{ kube_group }} state=directory
+#    - file: path={{ kube_home }}/certs owner={{ kube_user }} group={{ kube_group }} state=directory
+- file: path={{ kube_home }}/manifests owner={{ kube_user }} group={{ kube_group }} state=directory
+- file: path={{ kube_home }}/cfg owner={{ kube_user }} group={{ kube_group }} state=directory
+
+#unarchive模块测试会失败 改成了解压命令执行
+#- unarchive: src=../files/kubernetes-{{ k8s_version }}.tar.gz dest={{ kube_home }} creates={{ kube_home }}/kubernetes-{{ k8s_version }}
+- copy: src=../files/kubernetes-{{ k8s_version }}.tar.gz dest={{     kube_home }}
+- shell: cd {{ kube_home }} && tar -xzvf kubernetes-{{ k8s_version }}.tar.gz
+- file: path={{ kube_home }}/kubernetes-{{ k8s_version }} owner={{ kube_user }} group={{ kube_group }} recurse=yes
+- file: path={{ kube_home }}/kubernetes src={{ kube_home }}/kubernetes-{{ k8s_version }} owner={{ kube_user }} group={{ kube_group }} state=link force=true
+
+- file: path={{ kube_home }}/certs src=/data/usr/certs state=link force=true
+
+- template: src=../templates/kubeconfig.j2 dest={{ kube_home }}/kubeconfig owner={{ kube_user }} group={{ kube_group }}
+- template: src=../templates/kubeconfig.kube-proxy.j2 dest={{ kube_home }}/kubeconfig.kube-proxy owner={{ kube_user }} group={{ kube_group }}
+- template: src=../templates/kubelet.j2 dest={{ kube_home }}/cfg/kubelet owner={{ kube_user }} group={{ kube_group }}
+- template: src=../templates/kubelet.service.j2 dest=/etc/systemd/system/kubelet.service
+- template: src=../templates/kube-proxy.j2 dest={{ kube_home }}/cfg/kube-proxy owner={{ kube_user }} group={{ kube_group }}
+- template: src=../templates/kube-proxy.service.j2 dest=/etc/systemd/system/kube-proxy.service
+
+# CNI
+- copy: src=../files/network-plugins-0.6.0 dest={{ kube_home }}/ owner={{ kube_user }} group={{ kube_group }} mode=755
+- file: path={{ kube_home }}/network-plugins src={{ kube_home }}/network-plugins-0.6.0 owner={{ kube_user }} group={{ kube_group }} state=link
+- copy: src=../files/net.d dest={{ kube_home }}/ owner={{ kube_user }} group={{ kube_group }}
+
+- stat: path="{{ calico_home }}/calico"
+  register: stat_result
+- block:
+    - file: path={{ kube_home }}/network-plugins/calico src={{ calico_home }}/calico/bin/calico owner={{ kube_user }} group={{ kube_group }} state=link
+    - file: path={{ kube_home }}/network-plugins/calico-ipam src={{ calico_home }}/calico/bin/calico-ipam owner={{ kube_user }} group={{ kube_group }} state=link
+    - template: src=../templates/calico/net.d/09-calico.conf.j2 dest={{ kube_home }}/net.d/09-calico.conf owner={{ kube_user }} group={{ kube_group }}
+  when: stat_result.stat.exists == True
+
+- command: systemctl daemon-reload
+
+- block:
+   - name: "pull hyperkube"
+     command: docker pull x.wz.net/google_containers/hyperkube:v{{ k8s_version }}
+   - name: "template apiserver"
+     template: src=../templates/manifests/kube-apiserver.yaml.j2 dest={{ kube_home }}/manifests/kube-apiserver.yaml owner={{ kube_user }} group={{ kube_group }}
+   - name: "template controller-manager" 
+     template: src=../templates/manifests/kube-controller-manager.yaml.j2 dest={{ kube_home }}/manifests/kube-controller-manager.yaml owner={{ kube_user }} group={{ kube_group }}
+   - name: "template scheduler"
+     template: src=../templates/manifests/kube-scheduler.yaml.j2 dest={{ kube_home }}/manifests/kube-scheduler.yaml owner={{ kube_user }} group={{ kube_group }}
+  when: master is defined
+
+# kubelet/kube-proxy Healthz
+#- firewalld: permanent=yes immediate=yes zone=public port=10248/tcp state=enabled
+#- firewalld: permanent=yes immediate=yes zone=public port=10250/tcp state=enabled
+#- firewalld: permanent=yes immediate=yes zone=public port=10255/tcp state=enabled
+#- firewalld: permanent=yes immediate=yes zone=public port=10256/tcp state=enabled
+
+- service: name=kube-proxy enabled=yes
+- service: name=kubelet enabled=yes
+- service: name=docker state=restarted
+- service: name=kube-proxy state=restarted
+- service: name=kubelet state=restarted
+
+# # Memblaze
+# - service: name=docker enabled=no
+# - service: name=kubelet enabled=no

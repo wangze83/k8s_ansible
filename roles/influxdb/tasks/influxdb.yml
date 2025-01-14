@@ -1,0 +1,28 @@
+---
+# 安装服务
+- file: path="{{ influxdb_home }}"
+        state=directory owner={{ influxdb_user }} group={{ influxdb_group }} mode=0755
+- file: path="{{ influxdb_data }}"
+        state=directory owner={{ influxdb_user }} group={{ influxdb_group }} mode=0755
+- file: path="{{ influxdb_home }}/{{ influxdb_release }}-1"
+        state=directory owner={{ influxdb_user }} group={{ influxdb_group }} mode=0755
+
+- unarchive:
+    src="releases/{{ influxdb_release }}_linux_amd64.tar.gz"
+    dest="{{ influxdb_home }}"
+
+- file:
+    path="{{ influxdb_home }}/{{ influxdb_release }}-1"
+    owner={{ influxdb_user }} group={{ influxdb_group }} recurse=yes
+
+- file:
+    path="{{ influxdb_home }}/influxdb"
+    src="{{ influxdb_home }}/{{ influxdb_release }}-1"
+    owner={{ influxdb_user }} group={{ influxdb_group }} state=link
+
+# 同步配置
+- template:
+    src="influxdb.service.j2"
+    dest=/etc/systemd/system/{{ influxdb_systemd['name'] }}.service
+- command: systemctl daemon-reload
+

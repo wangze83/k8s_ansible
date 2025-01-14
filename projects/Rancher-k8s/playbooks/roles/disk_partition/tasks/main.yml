@@ -1,0 +1,74 @@
+- name: Storage partition sda
+  set_fact:
+    disk_model: sda
+  when:
+  - ansible_devices['sda'] is defined
+  - ansible_devices['sdb'] is not defined
+  - ansible_devices['memdiska'] is not defined
+  - ansible_devices['nvme0n1'] is not defined
+  - ansible_devices['dfa'] is not defined
+  tags:
+    - disk
+
+- name: Storage partition md1
+  set_fact:
+      disk_model: md1
+  with_dict: "{{ ansible_device_links.ids }}"
+  when:
+  - item.key | regex_search('^sd[b-z]$')
+  tags:
+    - disk
+
+
+- name: Storage partition memdiska
+  set_fact:
+      disk_model: memdiska
+      flash_type: true
+  when:
+  - ansible_devices['memdiska'] is defined
+  - ansible_devices['sdb'] is not defined
+  tags:
+    - disk
+
+- name: Storage partition nvme0n1
+  set_fact:
+      disk_model: nvme0n1
+      flash_type: true
+  when:
+  - ansible_devices['nvme0n1'] is defined
+  - ansible_devices['sdb'] is not defined
+  tags:
+    - disk
+
+- name: Storage partition dfa
+  set_fact:
+      disk_model: dfa
+      flash_type: true
+  when:
+  - ansible_devices['dfa'] is defined
+  - ansible_devices['sdb'] is not defined
+  tags:
+    - disk
+
+- name: Check parm valid
+  fail:
+    msg: "Storage partition is not valid {{ item.key }}"
+  when:
+  - disk_model == "none"
+  tags:
+    - disk
+
+- include_tasks: '{{ disk_model }}.yml'
+  when: disk_model == disk_model and flash_type == "none"
+  tags:
+    - disk
+
+- include_tasks: 'flash.yml'
+  when: disk_model == disk_model and flash_type == true
+  tags:
+    - disk
+
+
+- include_tasks: 'disk_check.yml'
+  tags:
+    - disk

@@ -1,0 +1,74 @@
+{{- if .Values.schedulerConfig.autoConfigScheduler }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gpushare-installer-reset
+  namespace: kube-system
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded
+  labels:
+    app: gpushare
+    name: gpushare-installer-reset
+    chart: {{ template "gpushare-installer.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  parallelism: {{ .Values.masterCount }}
+  template:
+    metadata:
+      labels: 
+        chart: {{ template "gpushare-installer.chart" . }}
+        release: {{ .Release.Name }}
+        heritage: {{ .Release.Service }}
+        app: gpushare
+        name: gpushare-installer-reset
+    spec:
+      hostNetwork: true
+      tolerations:
+      - key: ""
+        operator: "Exists"
+      nodeSelector:
+        node-role.kubernetes.io/controlplane: "true"
+      restartPolicy: OnFailure
+      containers:
+      - name: deploy-schd-reset
+        {{- if .Values.pullImageByVPCNetwork }}
+        image: "{{ .Values.images.installer.image | replace "registry." "registry-vpc." }}:{{ .Values.images.installer.tag }}"
+        {{- else }}
+        image: "{{ .Values.images.installer.image }}:{{ .Values.images.installer.tag }}"
+        {{- end }}
+        imagePullPolicy: {{ .Values.images.installer.pullPolicy }}
+        securityContext:
+          privileged: true
+        command: ["python","reset.py"]
+        env:
+        {{- if .Values.schedulerConfig.type }}
+          - name: CONFIG_TYPE
+            value: {{ .Values.schedulerConfig.type }}
+        {{- end }}
+        {{- if .Values.schedulerConfig.schedulerStaticPodYaml }}
+          - name: SCHEDULER_STATIC_POD_YAML
+            value: "{{ .Values.schedulerConfig.schedulerStaticPodYaml }}"
+        {{- end }}
+        volumeMounts:
+        - name: kube-dir
+          mountPath: /etc/kubernetes
+      volumes:
+      - hostPath:
+          path: /etc/kubernetes
+          type: Directory
+        name: kube-dir
+
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: name
+                    operator: In
+                    values:
+                       - gpushare-installer-reset
+              topologyKey: "kubernetes.io/hostname"
+{{- end }}

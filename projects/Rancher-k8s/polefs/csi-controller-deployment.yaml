@@ -1,0 +1,181 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: polefs-csi-controller-account
+  namespace: wz-system
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: polefs-csi-controller-role-binding
+subjects:
+  - kind: ServiceAccount
+    name: polefs-csi-controller-account
+    namespace: wz-system
+roleRef:
+  kind: ClusterRole
+  name: polefs-csi-controller-role
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: polefs-csi-controller-role
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list", "watch", "create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["csi.storage.k8s.io"]
+    resources: ["csinodeinfos"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["volumeattachments"]
+    verbs: ["get", "list", "watch", "update"]
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  # replace with non-polefs namespace name
+  namespace: wz-system
+  name: polefs-external-provisioner-cfg
+rules:
+  - apiGroups: [""]
+    resources: ["endpoints"]
+    verbs: ["get", "watch", "list", "delete", "update", "create"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "create", "delete"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "watch", "list", "delete", "update", "create"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: polefs-csi-controller-account-role-cfg
+  # replace with non-polefs namespace name
+  namespace: wz-system
+subjects:
+  - kind: ServiceAccount
+    name: polefs-csi-controller-account
+    # replace with non-polefs namespace name
+    namespace: wz-system
+roleRef:
+  kind: Role
+  name: polefs-external-provisioner-cfg
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: polefs-csi-controller-share
+  namespace: wz-system
+spec:
+  selector:
+    matchLabels:
+      app: polefs-csi-controller-share
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: polefs-csi-controller-share
+    spec:
+      serviceAccountName: polefs-csi-controller-account
+      containers:
+        - name: csi-resizer
+          args:
+            - --v=5
+            - --csi-address=/csi/polefs-provisioner-share.sock
+            - --leader-election
+            - --http-endpoint=:8080
+          image: harbor.wz.cn/common/csi-resizer:v1.1.0
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+          ports:
+            - containerPort: 8080
+              name: http-endpoint
+              protocol: TCP
+        - name: csi-provisioner
+          image: harbor.wz.cn/common/csi-provisioner:v2.0.2
+          resources:
+            limits:
+              cpu: "4"
+              memory: 8000Mi
+            requests:
+              cpu: 2000m
+              memory: 8000Mi
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - "--csi-address=/csi/polefs-provisioner-share.sock"
+            - "--timeout=150s"
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
+        - name: csi-attacher
+          image: harbor.wz.cn/common/csi-attacher:v1.2.0
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - "--csi-address=/csi/polefs-provisioner-share.sock"
+            - "leader-election=true"
+            - "--leader-election-type=leases"
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
+        - name: controller
+          image: harbor.wz.cn/common/polefs-csi-driver:v3.0.3
+          resources:
+            limits:
+              cpu: "2"
+              memory: 4000Mi
+            requests:
+              cpu: 1000m
+              memory: 4000Mi
+          imagePullPolicy: "IfNotPresent"
+          securityContext:
+            privileged: true
+            capabilities:
+              add: ["SYS_ADMIN"]
+          args:
+            - "--v=5"
+            - "--endpoint=unix:///csi/polefs-provisioner-share.sock"
+            - "--nodeid=$(NODE_ID)"
+            - "--drivername=csi.share.com"
+            - "--version=v1.0.0"
+          lifecycle:
+            preStop:
+              exec:
+                command: [
+                  "/bin/sh",
+                  "-c",
+                  "rm -rf /csi/polefs-provisioner-share.sock"
+                ]
+          env:
+            - name: NODE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
+      volumes:
+        - name: socket-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/csi.share.com
+            type: DirectoryOrCreate

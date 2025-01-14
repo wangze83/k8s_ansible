@@ -1,0 +1,129 @@
+---
+### calico step 2
+
+# TODO: NAT tune. Move to somewhere else
+# # usage: --direct --add-rule { ipv4 | ipv6 | eb } <table> <chain> <priority> <args>
+# - command: firewall-cmd --direct --add-rule ipv4 nat POSTROUTING 0 -s 172.17.0.0/16 -d 10.1.1.1/18  -m mark ! --mark 0x4000/0x4000 -j ACCEPT
+
+- shell: "/usr/sbin/ethtool {{iface}} | grep Speed | awk '{print $2}'"
+  register: result
+  ignore_errors: yes
+- set_fact:
+    iface: eth2
+  when: result.failed == True or result.stdout == 'Unknown!'
+
+# /etc/calico
+- file: path=/etc/calico state=directory
+- file: src=/data/usr/certs/ca.pem path=/etc/calico/ca.pem state=link
+- file: src=/data/usr/certs/{{ inventory_hostname }}.pem path=/etc/calico/cert.pem state=link
+- file: src=/data/usr/certs/{{ inventory_hostname }}-key.pem path=/etc/calico/key.pem state=link
+- template: src=../templates/calico/calicoctl.cfg.j2 dest=/etc/calico/calicoctl.cfg
+
+# Calico install
+- file: path={{ calico_home }} state=directory
+#在本地unarchive模块会报错 改成了执行命令操作
+#- unarchive: src=../files/calico-3.1.1-1.tar.gz dest={{ calico_home }} creates={{ calico_home}}/calico-3.1.1-1
+- copy: src=../files/calico-3.1.1-1.tar.gz dest={{ calico_home }}
+- shell: cd {{ calico_home }}  &&  tar -xzvf calico-3.1.1-1.tar.gz
+- file: path={{ calico_home }}/calico src={{ calico_home }}/calico-3.1.1-1 state=link
+- file: path={{ calico_home }}/run state=directory
+- file: path={{ calico_home }}/cfg state=directory
+- file: path={{ calico_home }}/etc/bird state=directory recurse=true
+
+#  Cluster init
+- block:
+   - template: src=../templates/calico/bgp.yaml.j2 dest={{ calico_home }}/cfg/bgp.yaml
+
+   - template: src=../templates/calico/calico-pool.yaml.j2 dest={{ calico_home }}/cfg/calico-pool.yaml
+   - command: "{{ calico_home }}/calico/bin/calicoctl apply -f {{ calico_home }}/cfg/bgp.yaml"
+   - command: "{{ calico_home }}/calico/bin/calicoctl apply -f {{ calico_home }}/cfg/calico-pool.yaml"
+  when: master is defined
+
+#- command: lvs VolGroup01/ThinPool00
+#  register: result
+#  ignore_errors: yes
+#- set_fact:
+#    docker_thinpooldev: /dev/mapper/VolGroup01-ThinPool00
+#  when: result is success
+- service: name=docker state=stopped
+  ignore_errors: yes
+# Disable docker iptables
+- file: path=/etc/systemd/system/docker.service.d state=directory
+- file: path=/etc/docker state=directory
+#- copy: src=../files/seccomp.json dest=/etc/docker/seccomp.json
+#- template: src=../templates/calico/docker.conf.j2 dest=/etc/systemd/system/docker.service.d/docker.conf
+# TODO: Disable flanneld iptables
+
+# ipset
+# firewalld并不与ipset冲突 SCP-259
+#- lineinfile:
+#    dest: /usr/lib/systemd/system/firewalld.service
+#    state: present
+#    regexp: '^Conflicts=(.*)ipset.service(.*)'
+#    line: 'Conflicts=\1\2'
+#    backrefs: yes
+#- command: systemctl daemon-reload
+#- yum: name=ipset-service state=latest
+#- template:
+#    src="../templates/calico/ipset.j2"
+#    dest="/etc/sysconfig/ipset"
+#- service: name=ipset enabled=yes
+#- service: name=ipset state=restarted
+#- template:
+#    src="../templates/calico/direct.xml.j2"
+#    dest="/etc/firewalld/direct.xml"
+# RS
+# - file: path="/etc/firewalld/direct.xml" state=absent
+# - service: name=firewalld state=restarted
+
+# Clean iptables rules
+# /sbin/iptables -F -t filter
+# /sbin/iptables -F -t nat
+# /sbin/iptables -X DOCKER -t filter
+# /sbin/iptables -X DOCKER-ISOLATION -t filter
+# /sbin/iptables -X DOCKER -t nat
+
+- file: path={{ calico_home }}/confd state=directory
+- file: path={{ calico_home }}/confd/conf.d state=directory
+- template: src=../templates/calico/env.j2 dest=/etc/sysconfig/calico
+- template: src=../templates/calico/bird.toml.j2 dest={{ calico_home }}/confd/conf.d/bird.toml
+- template: src=../templates/calico/bird_aggr.toml.j2 dest={{ calico_home }}/confd/conf.d/bird_aggr.toml
+- template: src=../templates/calico/bird_ipam.toml.j2 dest={{ calico_home }}/confd/conf.d/bird_ipam.toml
+- copy: src=../files/calico-confd/templates dest={{ calico_home }}/confd
+
+# Run the startup initialisation script.  These ensure the node is correctly configured to run.
+- shell: "env $(cat /etc/sysconfig/calico | grep -v ^# | xargs) {{ calico_home }}/calico/bin/startup"
+  register: stdout
+# - debug: msg={{ stdout }}
+# Run confd once - this ensures we have sensible config generated at the point we start bird
+- shell: "env $(cat /etc/sysconfig/calico | grep -v ^# | xargs) {{ calico_home }}/calico/bin/confd -confdir={{ calico_home }}/confd -onetime -keep-stage-file"
+  register: stdout
+# - debug: msg={{ stdout }}
+
+- template:
+    src="../templates/calico/calico-bird.service.j2"
+    dest="/etc/systemd/system/calico-bird.service"
+- template:
+    src="../templates/calico/calico-confd.service.j2"
+    dest="/etc/systemd/system/calico-confd.service"
+- command: systemctl daemon-reload
+- service: name=calico-confd enabled=yes
+- service: name=calico-bird enabled=yes
+- service: name=calico-confd state=restarted
+- service: name=calico-bird state=restarted
+
+#- template: src=../templates/calico/calico-peer.yaml.j2 dest={{ calico_home }}/cfg/calico-peer.yaml
+#- template: src=../templates/peer.sh.j2 dest={{calico_home}}/cfg/peer.sh
+- shell: "sh {{calico_home}}/cfg/peer.sh > {{calico_home}}/cfg/calico-peer.yaml"
+- shell: "{{ calico_home }}/calico/bin/calicoctl apply -f {{ calico_home }}/cfg/calico-peer.yaml"
+
+- wait_for: timeout=10
+- shell: "{{ calico_home }}/calico/bin/birdcl -s {{ calico_home }}/run/bird.ctl  show pro all | grep 'BGP state:'"
+  register: result
+  failed_when: "'Established' not in result['stdout']"
+
+# - service: name=docker state=restarted
+# - service: name=kubelet state=restarted
+
+# ./calico/bin/calicoctl get bgpPeer
+# ./calico/bin/calicoctl get workloadEndpoint

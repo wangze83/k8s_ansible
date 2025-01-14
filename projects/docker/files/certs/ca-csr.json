@@ -1,0 +1,20 @@
+{
+  "CA": {
+    "expiry": "327200h",
+    "pathlen": 0
+  },
+  "CN": "X wz SOFTWARE CO. LIMITED",
+  "key": {
+    "algo": "ecdsa",
+    "size": 384
+  },
+  "names": [
+    {
+      "C": "CN",
+      "ST": "Beijing",
+      "L": "Beijing",
+      "O": "X wz",
+      "OU": "platform"
+    }
+  ]
+}

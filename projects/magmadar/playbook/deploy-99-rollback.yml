@@ -1,0 +1,14 @@
+---
+- hosts: "{{ dc }}"
+  remote_user: group
+  tasks:
+    # 紧急回滚
+    # 流量切到备份环境，完整的服务回归应按照普通发布流程进行（发布历史版本）
+    - command: "supervisorctl stop magmadar-ng:"
+    - command: "supervisorctl status magmadar-ng:"
+      register: output
+    - fail: msg="magmadar-ng(the new version) is still running!"
+      when: output.stdout.find("RUNNING") != -1
+  sudo: no
+  gather_facts: no
+

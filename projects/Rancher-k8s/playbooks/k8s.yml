@@ -1,0 +1,18 @@
+---
+- hosts: "{{ group }}"
+  gather_facts: true
+  serial: 10
+  become: yes
+
+  roles:
+    - { role: "disk_partition", when: ansible_distribution_major_version == "7" and ansible_kernel == "4.19.136"}
+
+
+
+- hosts: "{{ group }}"
+  gather_facts: false
+  become: yes
+  serial: 10
+
+  roles:
+    - { role: "docker"}

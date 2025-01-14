@@ -1,0 +1,31 @@
+- name: format filesystem
+  filesystem:
+    fstype: xfs
+    dev: /dev/{{ flash_type }}
+    opts: '-n ftype=1'
+    force: yes
+  tags:
+  - disk
+
+
+- name: create mount point
+  file:
+    state: directory
+    path: /var/lib/docker
+  tags:
+  - disk
+
+- name: mount /var/lib/docker
+  mount:
+    src: /dev/{{ flash_type }}
+    path: /var/lib/docker
+    fstype: xfs
+    opts: "defaults,pquota"
+    state: mounted
+  tags:
+  - disk
+
+
+# - include_tasks: 'common.yml'
+
+

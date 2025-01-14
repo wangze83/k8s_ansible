@@ -1,0 +1,14 @@
+---
+- hosts: '{{ group }}'
+  become: yes
+  gather_facts: no
+  vars:
+    docker_rpm: lxcfs-3.0.3-1.x86_64.rpm
+  tasks:
+    # 如果脚本 hang 住，登录机器能发现 yum 进程是 s 状态，更新 Ceph.repo 可以解决
+    # - copy: src=../../../projects/docker/files/Ceph.repo dest=/etc/yum.repos.d/
+    # - shell: pkill yum
+    - copy: src=../files/{{ docker_rpm }} dest=/tmp
+    - yum: name=/tmp/{{ docker_rpm }} state=present
+    - service: name=lxcfs enabled=yes
+    - service: name=lxcfs state=started

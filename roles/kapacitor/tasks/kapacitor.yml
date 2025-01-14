@@ -1,0 +1,28 @@
+---
+# 安装服务
+- file: path="{{ kapacitor_home }}"
+        state=directory owner={{ kapacitor_user }} group={{ kapacitor_group }} mode=0755
+- file: path="{{ kapacitor_data }}"
+        state=directory owner={{ kapacitor_user }} group={{ kapacitor_group }} mode=0755
+- file: path="{{ kapacitor_home }}/{{ kapacitor_release }}-1"
+        state=directory owner={{ kapacitor_user }} group={{ kapacitor_group }} mode=0755
+
+- unarchive:
+    src="releases/{{ kapacitor_release }}_linux_amd64.tar.gz"
+    dest="{{ kapacitor_home }}"
+
+- file:
+    path="{{ kapacitor_home }}/{{ kapacitor_release }}-1"
+    owner={{ kapacitor_user }} group={{ kapacitor_group }} recurse=yes
+
+- file:
+    path="{{ kapacitor_home }}/kapacitor"
+    src="{{ kapacitor_home }}/{{ kapacitor_release }}-1"
+    owner={{ kapacitor_user }} group={{ kapacitor_group }} state=link
+
+# 同步配置
+- template:
+    src="kapacitor.service.j2"
+    dest=/etc/systemd/system/{{ kapacitor_systemd['name'] }}.service
+- command: systemctl daemon-reload
+

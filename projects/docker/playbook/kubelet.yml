@@ -1,0 +1,12 @@
+- hosts: '{{ group }}'
+  serial: 5
+  become: yes
+  gather_facts: yes
+  tasks:
+    - template: src=../templates/kubelet.j2 dest={{ kube_home }}/cfg/kubelet owner={{ kube_user }} group={{ kube_group }}
+    - template: src=../templates/kubelet.service.j2 dest=/etc/systemd/system/kubelet.service
+
+    - command: systemctl daemon-reload 
+    - service: name=kubelet state=restarted
+    - pause:
+        seconds: 15

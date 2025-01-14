@@ -1,0 +1,97 @@
+---
+- hosts: "{{ group }}"
+  vars:
+    docker_rpm: docker-ce-17.03.2.ce-1.el7.centos.x86_64.rpm
+    docker_selinux_rpm: docker-ce-selinux-17.03.2.ce-1.el7.centos.noarch.rpm
+    docker_thinpooldev: /dev/mapper/VolGroup00-ThinPool00
+    iface: eth2
+  tasks:
+    - command: ethtool {{ iface }}
+      register: result
+      ignore_errors: yes
+    - set_fact:
+        iface: eth0
+      when: result is failed
+
+    - service: name=kube-proxy state=stopped
+    - service: name=kubelet state=stopped
+    - service: name=docker state=stopped
+    - service: name=flanneld state=stopped
+
+    # Disable this reboot
+    - service: name=kube-proxy enabled=no
+    - service: name=kubelet enabled=no
+
+    # Remove FUSE
+  # - command: rm /etc/cron.d/check.hadoop.fuse.cron
+  #   ignore_errors: yes
+
+    - file: path=/etc/yum.repos.d/Docker.repo state=absent
+    - file: path="/service/{{ item.svc }}" state=absent
+      with_items:
+        - { svc: 'decruft' }
+        - { svc: 'ns.collector.service' }
+        - { svc: 'ntpsync' }
+
+  # SCP-187
+    - yum: name=chrony state=latest disablerepo=centos-gluster*
+    - service: name=ntpd enabled=no
+    - service: name=ntpd state=stopped
+    - service: name=chronyd enabled=yes
+    - service: name=chronyd state=started
+
+  # SCP-203
+    - template: src=../../templates/ifup-local.j2 dest=/sbin/ifup-local mode=0755
+    - copy: src=../../files/system/flanneld.service.d dest=/etc/systemd/system/
+      register: ifup_script
+    - command: systemctl daemon-reload
+      when: ifup_script.changed
+
+  # Update Docker
+    - copy: src=../../files/{{ docker_rpm }} dest=/tmp
+    - copy: src=../../files/{{ docker_selinux_rpm }} dest=/tmp
+    - yum: name=/tmp/{{ docker_rpm }},/tmp/{{ docker_selinux_rpm }} state=present disable_gpg_check=yes
+    - file: path="/etc/docker" state=directory
+    - copy: src=../../files/seccomp.json dest=/etc/docker/seccomp.json
+    - service: name=docker enabled=yes
+
+    - command: lvs VolGroup01/ThinPool00
+      register: result
+      ignore_errors: yes
+    - set_fact:
+        docker_thinpooldev: /dev/mapper/VolGroup01-ThinPool00
+      when: result is success
+
+  # SCP-232
+  # Require reboot
+    - selinux: policy=targeted state=disabled
+  # - template: src=../../templates/docker.conf.j2 dest=/etc/systemd/system/docker.service.d/docker.conf
+    - template: src=../../templates/calico/docker.conf.j2 dest=/etc/systemd/system/docker.service.d/docker.conf
+
+  # SCP-237
+    - yum: name=firewalld state=latest disablerepo=centos-gluster*
+    - lineinfile:
+        dest: /usr/lib/systemd/system/firewalld.service
+        state: present
+        regexp: '^Conflicts=(.*)ipset.service(.*)'
+        line: 'Conflicts=\1\2'
+        backrefs: yes
+    - command: systemctl daemon-reload
+  # SCP-397
+    - copy: src=../../files/libipt_MASQUERADE.so-1.4.21-24.1.scp.el7.centos.x86_64 dest=/usr/lib64/xtables/libipt_MASQUERADE.so
+    - service: name=ipset enabled=yes
+
+  # SCP-158 SCP-239 SCP-240 SCP-252
+    - firewalld: permanent=yes immediate=yes zone=public port=10257/tcp state=enabled
+    - template: src=../../templates/flanneld.j2 dest=/etc/sysconfig/flanneld
+    - copy: src=../../files/flanneld-0.9.0 dest=/usr/bin/flanneld
+
+  # SCP-302
+    - copy: src=../../files/ceph-3.10.0-514.10.2.el7.ttm.x86_64.ko dest=/lib/modules/3.10.0-514.10.2.el7.ttm.x86_64/kernel/fs/ceph/ceph.ko
+
+  # SCP-334
+  # kubelet.cfg update in node.yaml
+    
+    - command: reboot
+  become: yes
+  gather_facts: yes

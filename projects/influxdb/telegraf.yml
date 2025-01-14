@@ -1,0 +1,14 @@
+---
+- hosts: "{{ group }}"
+  vars_files:
+    - inventory/vars/telegraf.vault
+  roles:
+    - telegraf
+  tasks:
+    - template:
+        src="templates/telegraf.conf.j2"
+        dest="{{ telegraf_config }}"
+        owner={{ telegraf_user }} group={{ telegraf_group }}
+      tags: configuration
+  become: yes
+  gather_facts: yes

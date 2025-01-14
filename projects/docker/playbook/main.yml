@@ -1,0 +1,62 @@
+---
+- hosts: "{{ group }}"
+
+  serial: 60
+
+  vars:
+    disk_model: none
+    docker_thinpooldev: /dev/mapper/VolGroup00-ThinPool00
+    # ceph
+    ceph_version: 0.94.5.9-1.el7.wz
+    # docker
+    docker_rpm: docker-ce-18.06.1.ce-3.el7.x86_64.rpm
+    docker_selinux_rpm: container-selinux-2.68-1.el7.noarch.rpm
+    # kubernetes
+    k8s_version: 1.10.13
+    rbac: false
+    iface: eth0
+
+  tasks:
+    - name: Check OS version and kernel version
+      fail:
+        msg: "The {{ inventory_hostname }}'s OS version and kernel version is not 7.2k4.19.136, please reinstall the system in https://ops.wz.net/work-manage/reset/order! "
+      when: ansible_kernel != "4.19.136" or ansible_distribution_version != "7.2"
+
+    - name: define traditional ethernet facts
+      set_fact:
+        ansible_eth: "{% set ansible_eth = ansible_eth|default([]) + [hostvars[inventory_hostname]['ansible_' + item]] %}{{ ansible_eth|list }}"
+      when: >
+        hostvars[inventory_hostname]['ansible_' + item]['type'] == 'ether' and
+        hostvars[inventory_hostname]['ansible_' + item]['active'] == true and
+        hostvars[inventory_hostname]['ansible_' + item]['ipv4'] is defined
+      with_items:
+        - "{{ hostvars[inventory_hostname]['ansible_interfaces'] }}"
+    - set_fact:
+        iface: "{{ ansible_eth.0['device'] }}"
+
+    ### check time 检查服务器时间与标准时间
+    - include_tasks: "check_time.yml"
+
+    - include_tasks: "fix-cloudops.yaml"
+    ### init
+    - include_tasks: "init.yml"
+    ### cert
+    - include_tasks: "gen-node-certs.yml"
+    - include_tasks: "certs.yml"
+    ### network
+    - include_tasks: "firewall.yml"
+    - include_tasks: "network-tune.yml"
+    - include_tasks: "calico.yaml"
+    # glusterfs/ceph
+    - include_tasks: "glusterfs.yml"
+    - include_tasks: "ceph.yml"
+    ## docker kubernetes
+    - include_tasks: "docker-overlayfs.yml"
+    # - include_tasks: "addgroup.yml"
+    - include_tasks: "kubernetes.yml"
+  become: yes
+  gather_facts: true
+# 现在的监控方案是daemonset起来的telegraf所以备注掉了
+#- include: telegraf.yml
+# - include: addons.yaml
+# - include: node-label.yaml

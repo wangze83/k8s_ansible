@@ -1,0 +1,7 @@
+{% for addr in lvs_ips[group] %}
+    {%- set network = hostvars[inventory_hostname]['ansible_' + iface]['ipv4']['network'] %}
+    {%- set netmask = hostvars[inventory_hostname]['ansible_' + iface]['ipv4']['netmask'] %}
+    {%- set net = network + '/' + netmask -%}
+    {{ addr | ipaddr(0) }} via {{ net | ipaddr('net') | ipaddr('1') | ipaddr('address') }} dev {{ iface }}
+{% endfor %}
+

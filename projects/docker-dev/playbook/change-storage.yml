@@ -1,0 +1,37 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+    - name: 中止所有容器 
+      raw: docker ps -a | grep -v CONTAINER | awk '{print $1}' | xargs docker stop
+      register: result
+      ignore_errors: True
+    - name: 删除所有容器
+      raw: docker ps -a | grep -v CONTAINER | awk '{print $1}' | xargs docker rm
+      when: result|succeeded
+    - name: 删除overlay镜像所在目录
+      file: 
+        path: /var/lib/docker/image/overlay
+        state: absent
+    # - name: 删除所有镜像
+    #   raw: docker images | awk 'BEGIN { OFS=":"  } {print $1,$2} ' | grep -v REPOSITORY | xargs docker rmi
+    #   when: result|succeeded
+    - name: 停止docker
+      service: 
+        name: docker 
+        enabled: no 
+    - name: 重置docker系统服务
+      copy: 
+        src: ../files/system/docker.service.d 
+        dest: /etc/systemd/system/
+    - name: 启用docker
+      service: 
+        name: docker 
+        enabled: yes
+    - name: 启动docker
+      service: 
+        name: docker 
+        state: started
+    - name: 重启系统服务
+      command: systemctl restart docker.service 
+  become: yes
+  gather_facts: no

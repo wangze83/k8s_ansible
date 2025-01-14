@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nvidia-container-toolkit-daemonset
+  namespace: gpu-operator-resources
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: nvidia-container-toolkit-daemonset
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: "2021-01-21T20:52:29+08:00"
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+      labels:
+        app: nvidia-container-toolkit-daemonset
+    spec:
+      containers:
+        - args:
+            - /usr/local/nvidia
+          env:
+            - name: RUNTIME_ARGS
+              value: --socket /var/run/docker.sock
+            - name: RUNTIME
+              value: docker
+          image: harbor.wz.cn/nvidia/container-toolkit:1.5.0-ubi8
+          imagePullPolicy: Always
+          name: nvidia-container-toolkit-ctr
+          resources: {}
+          securityContext:
+            privileged: true
+            seLinuxOptions:
+              level: s0
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /var/run/docker.sock
+              name: docker-socket
+            - mountPath: /run/nvidia
+              mountPropagation: Bidirectional
+              name: nvidia-install-path
+            - mountPath: /etc/docker
+              name: docker-config
+            - mountPath: /usr/local/nvidia
+              name: nvidia-local
+            - mountPath: /usr/share/containers/oci/hooks.d
+              name: crio-hooks
+      dnsPolicy: ClusterFirst
+      hostPID: true
+      initContainers:
+        - name: waiting-for-nvidia-driver-daemonset
+          image: harbor.wz.net/x./busybox:latest
+          command: ["sleep", "10"]
+        - args:
+            - export SYS_LIBRARY_PATH=$(ldconfig -v 2>/dev/null | grep -v '^[[:space:]]'
+              | cut -d':' -f1 | tr '[[:space:]]' ':');   export NVIDIA_LIBRARY_PATH=/run/nvidia/driver/usr/lib/x86_64-linux-gnu/:/run/nvidia/driver/usr/lib64;
+              export LD_LIBRARY_PATH=${SYS_LIBRARY_PATH}:${NVIDIA_LIBRARY_PATH}; echo
+              ${LD_LIBRARY_PATH}; export PATH=/run/nvidia/driver/usr/bin/:${PATH}; until
+              nvidia-smi; do echo waiting for nvidia drivers to be loaded; sleep 5; done
+          command:
+            - sh
+            - -c
+          image: harbor.wz.cn/nvidia/cuda@sha256:ed723a1339cddd75eb9f2be2f3476edf497a1b189c10c9bf9eb8da4a16a51a59
+          imagePullPolicy: IfNotPresent
+          name: driver-validation
+          resources: {}
+          securityContext:
+            privileged: true
+            seLinuxOptions:
+              level: s0
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /run/nvidia
+              mountPropagation: Bidirectional
+              name: nvidia-install-path
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - hostPath:
+            path: /var/run/docker.sock
+            type: ""
+          name: docker-socket
+        - hostPath:
+            path: /run/nvidia
+            type: ""
+          name: nvidia-install-path
+        - hostPath:
+            path: /etc/docker
+            type: ""
+          name: docker-config
+        - hostPath:
+            path: /usr/local/nvidia
+            type: ""
+          name: nvidia-local
+        - hostPath:
+            path: /etc/containers/oci/hooks.d
+            type: ""
+          name: crio-hooks
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 10%
+    type: RollingUpdate

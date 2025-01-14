@@ -1,0 +1,19 @@
+---
+- hosts: "{{ group }}"
+  serial: 5
+  vars:
+    gpu_driver_version: nvidia-diag-driver-local-repo-rhel7-396.82-1.0-1.x86_64.rpm
+  tasks:
+    - name: Copy nvidia driver
+      copy: src=../../files/{{ gpu_driver_version }} dest=/tmp/ mode=755
+    - name: Install driver
+      yum: name=/tmp/{{ gpu_driver_version }} state=present
+    - name: Yum clean cache
+      command: yum clean all
+    - name: Yum install cuda-drivers
+      command: yum install -y cuda-drivers
+    - name: Reboot
+      command: reboot
+
+  become: yes
+  gather_facts: true

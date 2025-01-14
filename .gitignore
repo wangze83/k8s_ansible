@@ -1,0 +1,5 @@
+.idea
+projects/x-k8s/playbooks/inventory
+projects/x-k8s/playbooks/pod
+projects/x-k8s/playbooks/sftp-config.json
+projects/x-k8s/playbooks/roles/docker/tasks/sre_init.yml

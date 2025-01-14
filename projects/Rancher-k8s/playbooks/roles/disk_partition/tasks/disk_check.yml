@@ -1,0 +1,11 @@
+---
+- name: ensure disk size is enough
+  fail:
+    msg: "The disk partation {{ inventory_hostname }} for docker is {{ item.size_total/1024/1024/1024 }}G, please check!"
+  when:
+  - item.mount
+  - item.mount == "/var/lib/docker"
+  - item.size_total/1024/1024/1024 < 500
+  with_items: "{{ ansible_mounts }}"
+  tags:
+  - disk

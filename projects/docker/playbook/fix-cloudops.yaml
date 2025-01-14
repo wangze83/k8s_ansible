@@ -1,0 +1,20 @@
+# 移除不必要的服务
+- file: path="/service/{{ item.svc }}" state=absent
+  with_items:
+    - { svc: 'decruft' }
+    - { svc: 'ns.collector.service' }
+    - { svc: 'ntpsync' }
+# 避免服务预期外启动时配置错误
+- copy: src=../files/decruft.conf dest=/s/ops/pantheon/tools/conf/decruft
+  ignore_errors: yes
+# - command: /usr/local/bin/svc -d /da1/s/ops/pantheon/daemon/service/{{ item.svc }}
+#   with_items:
+#     - { svc: 'decruft' }
+#     - { svc: 'ns.collector.service' }
+#     - { svc: 'ntpsync' }
+
+# 修复被注释的日志切割服务
+- yum: name=logrotate state=latest disablerepo=* enablerepo=base,updates
+- command: mv /etc/cron.daily/logrotate.rpmnew /etc/cron.daily/logrotate
+  ignore_errors: yes
+

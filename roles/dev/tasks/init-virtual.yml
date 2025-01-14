@@ -1,0 +1,11 @@
+---
+
+- name: 调整服务器配置
+  command: tuned-adm profile virtual-guest
+  become: yes
+
+- name: 避免升级内核
+  lineinfile: dest=/etc/yum.conf state=present
+        line="exclude=kernel* centos-release* redhat-release*"
+  become: yes
+

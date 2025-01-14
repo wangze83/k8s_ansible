@@ -1,0 +1,8 @@
+---
+- hosts: "{{ group }}"
+  serial: 10
+  tasks:
+    - name: gen pod.yaml
+      shell: "sh ../files/check-pod-yaml.sh {{ inventory_hostname }} > ../files/pod/{{ inventory_hostname }}-pod.yaml"
+      delegate_to: 127.0.0.1
+      become: false

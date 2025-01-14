@@ -1,0 +1,23 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+    - lineinfile:
+        dest: /etc/ntp.conf
+        state: present
+        regexp: '^(server {{ item }}.*)'
+        line: '#\1'
+        backrefs: yes
+      with_sequence: start=0 end=3
+
+    - blockinfile:
+        dest: /etc/ntp.conf
+        state: present
+        insertafter: '^# Please consider joining the pool'
+        content: |
+          server ntp1.wz.net
+          server ntp2.wz.net
+
+#   - service: name=ntpd state=restarted
+    - service: name=ntpd state=stopped enabled=no
+  become: yes
+  gather_facts: no

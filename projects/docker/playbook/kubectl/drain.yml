@@ -1,0 +1,4 @@
+- debug:
+    msg: "draining node {{inventory_hostname}}"
+- local_action: "command kubectl --kubeconfig ~/.kube/{{ hostvars[inventory_hostname].group_names[0] }} drain {{inventory_hostname}} --ignore-daemonsets --delete-local-data --force --grace-period 30"
+  become: false

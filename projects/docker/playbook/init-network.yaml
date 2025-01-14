@@ -1,0 +1,35 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+    #unarchive模块测试会失败 改成了解压命令执行
+    #- unarchive: src=../files/kernel-{{ kernel_version }}.tar.gz dest=/tmp creates=/tmp/x86_64
+    - copy: src=../files/i40e-2.11.29-4.19.49-1.el7.x86_64.rpm dest=/tmp
+    - shell: cd /tmp/ && rpm -i i40e-2.11.29-4.19.49-1.el7.x86_64.rpm
+      ignore_errors: true
+    - name: add ethtool eth0
+      lineinfile: 
+        dest: /etc/rc.d/rc.local 
+        regex: '^/sbin/ethtool --set-priv-flags eth0'
+        line: '/sbin/ethtool --set-priv-flags eth0 disable-fw-lldp on'
+    - name: add ethtool eth0
+      lineinfile:
+        dest: /etc/rc.d/rc.local
+        regex: '^/sbin/ethtool --set-priv-flags eth1'
+        line: '/sbin/ethtool --set-priv-flags eth1 disable-fw-lldp on'
+    - name: add list
+      lineinfile:
+        dest: /etc/rc.d/rc.local
+        regex: '^lists='
+        line: 'lists=($(ls /sys/kernel/debug/i40e/*/command 2&gt;/dev/null))'
+    - name: add commond
+      lineinfile:
+        dest: /etc/rc.d/rc.local
+        regex: '^for'
+        line: 'for list in "${lists[@]}";do echo "lldp stop" > "$list";done'
+    - shell: "sleep 5 && reboot"
+      async: 1
+      poll: 0
+      ignore_errors: true
+
+  become: yes
+  gather_facts: yes

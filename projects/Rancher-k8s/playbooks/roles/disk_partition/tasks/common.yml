@@ -1,0 +1,25 @@
+# This yaml is to adjust LVM for /tmp, /var and /
+
+- name: readjust LV from /tmp
+  lvol:
+    vg: VolGroup00
+    lv: LogVol01
+    size: 100G
+    shrink: no
+    resizefs: yes
+
+- name: readjust LV from /var
+  lvol:
+    vg: VolGroup00
+    lv: LogVol02
+    size: 100G
+    shrink: no
+    resizefs: yes
+
+- name: readjust LV from /
+  lvol:
+    vg: VolGroup00
+    lv: LogVol03
+    size: 50G
+    shrink: no
+    resizefs: yes

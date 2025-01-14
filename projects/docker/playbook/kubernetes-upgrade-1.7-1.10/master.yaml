@@ -1,0 +1,13 @@
+---
+- hosts: "{{ group }}"
+  vars:
+    k8s_version: 1.10.13
+  tasks:
+    - command: docker pull r.wz.cloud/google_containers/hyperkube:v1.10.13
+
+    # upgrade master
+    - template: src=../../templates/manifests/kube-apiserver.yaml.j2 dest={{ kube_home }}/manifests/kube-apiserver.yaml owner={{ kube_user }} group={{ kube_group }}
+    - template: src=../../templates/manifests/kube-controller-manager.yaml.j2 dest={{ kube_home }}/manifests/kube-controller-manager.yaml owner={{ kube_user }} group={{ kube_group }}
+    - template: src=../../templates/manifests/kube-scheduler.yaml.j2 dest={{ kube_home }}/manifests/kube-scheduler.yaml owner={{ kube_user }} group={{ kube_group }}
+  become: yes
+  gather_facts: yes

@@ -1,0 +1,33 @@
+---
+- hosts: "{{ dc }}"
+  remote_user: group
+  vars:
+    assets_path: ../files
+  vars_files:
+    - inventory/vars/magmadar.vault
+  tasks:
+    # 安装服务
+    - synchronize: src={{ assets_path }}/redis dest=/search/tmp/
+    - unarchive: src=/search/tmp/redis/Redis3.tar.gz dest=/search/tmp/
+        copy=no
+        creates=/search/tmp/redis-3.0.5
+    - command: make PREFIX=/search/local install
+        chdir=/search/tmp/redis-3.0.5
+        creates=/search/local/bin/redis-server
+
+    # 同步配置
+    - copy:
+        src={{ assets_path }}/magmadar/supervisord.d/redis.ini
+        dest=/search/local/etc/supervisord.d/redis.ini
+        force=yes
+    - file: path=/search/srv/redis state=directory mode=0744
+    - file: path=/search/var/lib/redis/data state=directory mode=0744
+    - template:
+        src={{ assets_path }}/magmadar/redis.j2
+        dest=/search/srv/redis/magmadar.conf
+
+    # 启动服务
+    - supervisorctl: name="magmadar-redis:" state=present
+    - supervisorctl: name="magmadar-redis:" state=restarted
+  sudo: no
+  gather_facts: yes

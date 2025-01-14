@@ -1,0 +1,10 @@
+# Stage (Logstash)
+# - file: path="/data/usr/filebeat-logstash" state=directory
+- file: path="/data/usr/filebeat-stage" state=directory
+- template: src=../templates/filebeat-stage.yaml.j2 dest=/data/usr/filebeat-stage/kube-filebeat.yml
+
+# Kafka
+- file: path="/data/usr/filebeat" state=directory
+- template: src=../templates/filebeat.yaml.j2 dest=/data/usr/filebeat/kube-filebeat.yml
+# - command: rm /data/usr/filebeat/kube-filebeat.registry
+

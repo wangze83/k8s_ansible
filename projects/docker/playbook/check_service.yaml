@@ -1,0 +1,39 @@
+- hosts: '{{ group }}'
+  become: yes
+  gather_facts: false
+  vars:
+    flanneld: false
+    flanneld_status: ''
+    calico_bird: false
+    calico_bird_status: ''
+    docker: false
+    docker_status: ''
+    kubelet: false
+    kubelet_status: ''
+  tasks:
+    - name: populate service facts
+      service_facts:
+    - name: Check flanned
+      set_fact:
+        flanneld: true
+        flanneld_status: "{{ansible_facts.services['flanneld.service']['state']}}"
+      when: ansible_facts.services['flanneld.service'] is defined
+    - name: Check calico-bird
+      set_fact:
+        calico_bird: true
+        calico_bird_status: "{{ansible_facts.services['calico-bird.service']['state']}}"
+      when: ansible_facts.services['calico-bird.service'] is defined
+    - name: Check docker
+      set_fact:
+        docker: true
+        docker_status: "{{ansible_facts.services['docker.service']['state']}}"
+      when: ansible_facts.services['docker.service'] is defined
+    - name: Check kubelet
+      set_fact:
+        kubelet: true
+        kubelet_status: "{{ansible_facts.services['kubelet.service']['state']}}"
+      when: ansible_facts.services['kubelet.service'] is defined
+
+    - name: Check results
+      #   debug: msg="flanneld:{{flanneld}},{{flanneld_status}};calico_bird:{{calico_bird}},{{calico_bird_status}};docker:{{docker}},{{docker_status}};kubelet:{{kubelet}},{{kubelet_status}}"
+      debug: msg="{{flanneld}},{{flanneld_status}},{{calico_bird}},{{calico_bird_status}},{{docker}},{{docker_status}},{{kubelet}},{{kubelet_status}}"

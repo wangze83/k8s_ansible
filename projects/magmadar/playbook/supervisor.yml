@@ -1,0 +1,17 @@
+---
+- hosts: "{{ dc }}"
+  remote_user: group
+  vars:
+    assets_path: ../files
+  tasks:
+    # 安装服务
+    - pip: executable=/search/local/bin/pip2 name=supervisor extra_args='--upgrade --index-url=http://mirrors.aliyun.com/pypi/simple --trusted-host mirrors.aliyun.com'
+    # 同步配置
+    - copy: src={{ assets_path }}/magmadar/supervisord.conf
+        dest=/search/local/etc/supervisord.conf
+        force=yes
+    - file: path=/search/local/etc/supervisord.d state=directory mode=0744
+    - command: supervisord -c /search/local/etc/supervisord.conf
+    - shell: kill -0 `cat /search/var/run/supervisord.pid`
+  sudo: no
+  gather_facts: no

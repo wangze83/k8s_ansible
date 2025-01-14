@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<direct>
+  <chain table="filter" ipv="ipv4" chain="DOCKER-ISOLATION"/>
+  <!-- No Ping -->
+  <rule priority="0" table="filter" ipv="ipv4" chain="DOCKER-ISOLATION">-p icmp --icmp-type echo-request ! -d 172.17.0.0/16 -j DROP</rule>
+
+  <rule priority="5" table="filter" ipv="ipv4" chain="DOCKER-ISOLATION">-j RETURN</rule>
+</direct>
+

@@ -1,0 +1,44 @@
+---
+#NAME                    MAJ:MIN RM   SIZE RO TYPE MOUNTPOINT
+#sdb                       8:16   0 893.8G  0 disk
+#sdc                       8:32   0 893.8G  0 disk
+#sda                       8:0    0 446.6G  0 disk
+#├─sda2                    8:2    0 445.6G  0 part
+#│ ├─VolGroup00-LogVol00 253:1    0     4G  0 lvm  [SWAP]
+#│ ├─VolGroup00-LogVol02 253:2    0   100G  0 lvm  /var
+#│ ├─VolGroup00-LogVol03 253:0    0    50G  0 lvm  /
+#│ └─VolGroup00-LogVol01 253:3    0   100G  0 lvm  /tmp
+#└─sda1                    8:1    0     1G  0 part /boot
+
+# SWAP
+- command: swapoff -a
+- lineinfile:
+    dest: /etc/fstab
+    state: present
+    regexp: '^(/dev/mapper/VolGroup00-LogVol00 swap.*)'
+    line: '#\1'
+    backrefs: yes
+
+# Path: /tmp
+- lvol: vg=VolGroup00 lv=LogVol01 size=100g
+- command: xfs_growfs /dev/VolGroup00/LogVol01
+# Path: /var
+- lvol: vg=VolGroup00 lv=LogVol02 size=100g
+- command: xfs_growfs /dev/VolGroup00/LogVol02
+# Path: /
+- lvol: vg=VolGroup00 lv=LogVol03 size=50g
+- command: xfs_growfs /dev/VolGroup00/LogVol03
+# Path: /data
+- file: state=directory path=/data
+
+# Docker Data
+- lvg:  vg=VolGroup01 pvs=/dev/sdb
+- lvol: vg=VolGroup01 lv=LogVol00 size=100%FREE shrink=no
+- filesystem: fstype=xfs dev=/dev/VolGroup01/LogVol00 opts="-n ftype=1"
+- file: state=directory path=/var/lib/docker
+- mount: name=/var/lib/docker src=/dev/VolGroup01/LogVol00 fstype=xfs opts="defaults,pquota" state=mounted
+
+- command: pvcreate /dev/sdc
+- command: vgextend VolGroup01 /dev/sdc
+- command: lvextend -r /dev/VolGroup01/LogVol00 -l +100%FREE
+

@@ -1,0 +1,9 @@
+# file: hosts
+
+[bjdt]
+
+[magmadar:children]
+bjdt
+idc
+shjc
+gzst

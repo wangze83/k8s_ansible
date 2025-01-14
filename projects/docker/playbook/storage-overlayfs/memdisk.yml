@@ -1,0 +1,54 @@
+---
+# NAME                       MAJ:MIN RM   SIZE RO TYPE MOUNTPOINT
+# sda                          8:0    0 279.5G  0 disk 
+# ├─sda1                       8:1    0     1G  0 part /boot
+# └─sda2                       8:2    0 278.5G  0 part 
+#   ├─VolGroup00-LogVol03    253:0    0    20G  0 lvm  /
+#   ├─VolGroup00-LogVol00    253:1    0     4G  0 lvm  [SWAP]
+#   ├─VolGroup00-LogVol--da1 253:2    0 248.7G  0 lvm  /da1
+#   ├─VolGroup00-LogVol02    253:3    0     4G  0 lvm  /var
+#   └─VolGroup00-LogVol01    253:4    0     1G  0 lvm  /tmp
+# memdiska                   251:0    0   1.1T  0 disk
+
+## Remove old
+- lvol: vg=VolGroup01 lv=ThinPool00 state=absent force=yes
+- mount: name=/var/lib/docker state=unmounted
+- lvol: vg=VolGroup01 lv=LogVol00 state=absent force=yes
+- lvg: vg=VolGroup01 force=yes state=absent
+
+# - lvg:  vg=VolGroup01 pvs=/dev/memdiska state=absent force=true
+# LVM doesn't disable memdisk type by default
+- lineinfile:
+    dest: /etc/lvm/lvm.conf
+    state: present
+    regexp: '^\s+types\s?=.*"memdisk"'
+    insertafter: '# types = \[ "fd", 16 \]'
+    line: '        types = [ "memdisk", 16 ]'
+- lvg:  vg=VolGroup01 pvs=/dev/memdiska
+# Docker log (/var/lib/docker/containers)
+- lvol: vg=VolGroup01 lv=LogVol00 size=100%FREE shrink=no
+- filesystem: fstype=xfs dev=/dev/VolGroup01/LogVol00 opts="-n ftype=1"
+- file: state=directory path=/var/lib/docker
+- mount: name=/var/lib/docker src=/dev/VolGroup01/LogVol00 fstype=xfs opts="defaults,pquota" state=mounted
+
+# SWAP
+- command: swapoff -a
+- lineinfile:
+    dest: /etc/fstab
+    state: present
+    regexp: '^(/dev/mapper/VolGroup00-LogVol00 swap.*)'
+    line: '#\1'
+    backrefs: yes
+
+# Path: /tmp
+- lvol: vg=VolGroup00 lv=LogVol01 size=20g
+- command: xfs_growfs /dev/VolGroup00/LogVol01
+# Path: /var
+- lvol: vg=VolGroup00 lv=LogVol02 size=140g
+- command: xfs_growfs /dev/VolGroup00/LogVol02
+# Path: /
+- lvol: vg=VolGroup00 lv=LogVol03 size=100g
+- command: xfs_growfs /dev/VolGroup00/LogVol03
+# Path: /data
+- file: state=directory path=/data
+

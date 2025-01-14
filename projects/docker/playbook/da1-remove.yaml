@@ -1,0 +1,16 @@
+# Remove FUSE
+- command: rm /etc/cron.d/check.hadoop.fuse.cron
+  ignore_errors: yes
+- command: /s/apps/fuse.hdp/umount.sh
+  ignore_errors: yes
+
+- command: pkill -f '/bin/sh /usr/local/bin/svscanboot'
+  ignore_errors: yes
+- command: cp -rp /da1 /da2
+  ignore_errors: yes
+- mount: name=/da1 src=/dev/mapper/VolGroup00-LogVol--da1 fstype=ext4 state=absent
+- file: path=/da1 state=absent
+- command: mv /da2 /da1
+  ignore_errors: yes
+- lvol: vg=VolGroup00 lv=LogVol-da1 state=absent force=yes
+

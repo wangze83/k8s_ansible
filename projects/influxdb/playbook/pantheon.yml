@@ -1,0 +1,8 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+    - firewalld: permanent=yes immediate=yes zone=public port=12345/tcp state=enabled
+    - copy: src="../files/pantheon_install.sh" dest="/root" mode="744"
+    - command: /root/pantheon_install.sh
+  become: yes
+  gather_facts: no

@@ -1,0 +1,28 @@
+# .bashrc
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+    . /etc/bashrc
+fi
+
+export LC_ALL=en_US.UTF-8
+
+PS1="[\u@\h \W] #\#> "
+export PS1
+
+# Alias
+alias rm='rm -i'
+alias cp='cp -i'
+alias mv='mv -i'
+alias ls='ls -G --color'
+alias ll='ls -alF'
+alias la='ls -A'
+alias du='du -a -h --max-depth=1'
+alias df='df -h'
+alias vi='vim'
+alias grep='grep --color'
+
+export EDITOR=vim
+
+export PATH=$HOME/local/bin:$PATH
+

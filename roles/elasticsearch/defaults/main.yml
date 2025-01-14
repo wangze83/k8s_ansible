@@ -1,0 +1,13 @@
+---
+es_release: "2.2.1"
+es_instance_home: "/data/usr"
+es_instance_name: ""
+es_user: group
+es_group: group
+es_config: {}
+
+es_home: "/data/usr/elasticsearch"
+es_data_dir: "/data/var/lib/elasticsearch"
+es_log_dir: "/data/log/elasticsearch"
+es_pid_dir: "/data/var/run/elasticsearch"
+es_heap_size: 30g

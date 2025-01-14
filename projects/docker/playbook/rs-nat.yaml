@@ -1,0 +1,41 @@
+---
+- hosts: "{{ group }}"
+  vars:
+    iface: eth2
+  vars_files:
+    - ../inventory/vars/lvs
+  serial: 1
+  tasks:
+    # SCP-397
+    - yum: name=bird state=latest
+
+    - template: src=../templates/bird.conf.j2 dest=/etc/bird.conf
+
+    - service: name=bird enabled=yes
+    - service: name=bird state=restarted
+
+    - shell: "birdcl show pro all | grep 'BGP state:'"
+      register: result
+      failed_when: "'Established' not in result['stdout_lines']"
+
+    - lineinfile: dest=/etc/sysconfig/network-scripts/ifcfg-lo state=present
+            line="IPADDR2={{ network_scripts['snat_ip'] }}"
+    - lineinfile: dest=/etc/sysconfig/network-scripts/ifcfg-lo state=present
+            line="PREFIX2={{ network_scripts['snat_prefix'] }}"
+
+    - set_fact:
+        net: "{{ (network_scripts['snat_ip'] + '/' + network_scripts['snat_prefix'] | string ) | ipaddr('cidr') }}"
+  # - debug:
+  #     msg: "{{ item }}: {{ net | nthhost(item) }}/32"
+  #   with_sequence: start=0 end={{ 2 ** (32 - network_scripts['snat_prefix']) - 1 }}
+    - command: ip addr add {{ net | nthhost(item) }}/32 dev lo
+      with_sequence: start=0 end={{ 2 ** (32 - network_scripts['snat_prefix']) - 1 }}
+
+    - file: path="/etc/systemd/system/kube-proxy.service.d" state=directory
+    - template:
+        src: ../templates/system/kube-proxy.service.d/scp-392.conf.j2
+        dest: /etc/systemd/system/kube-proxy.service.d/scp-392.conf
+    - command: systemctl daemon-reload
+    - service: name=kube-proxy state=restarted
+  become: yes
+  gather_facts: yes

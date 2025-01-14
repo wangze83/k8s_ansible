@@ -1,0 +1,11 @@
+- hosts: '{{ group }}'
+  serial: 5
+  become: yes
+  gather_facts: yes
+  tasks:
+    - service: name=kubelet enabled=no
+    - service: name=kube-proxy enabled=no
+    - service: name=telegraf enabled=no
+    - service: name=kubelet state=stopped
+    - service: name=kube-proxy state=stopped
+    - service: name=telegraf state=stopped

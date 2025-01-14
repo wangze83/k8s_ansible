@@ -1,0 +1,1 @@
+cat ca-csr.json | ./cfssl gencert -initca  -ca-key search/ca-key.pem  -  | ./cfssljson -bare ca

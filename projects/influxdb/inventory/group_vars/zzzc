@@ -1,0 +1,26 @@
+datacenter: idc
+
+
+# Telegraf
+telegraf_bin: telegraf-1.2.1-2
+telegraf_home: /data/usr/telegraf
+telegraf_user: group
+telegraf_group: group
+telegraf_config: /data/usr/telegraf/telegraf.conf
+telegraf_pid: /data/var/run/telegraf.pid
+telegraf_log: /data/log/telegraf.log
+
+telegraf_plugins:
+    influxdb_groups:
+        - 8386
+        - 8686
+        - 8786
+        - 8886
+
+telegraf_influxdb:
+    url: http://xxxx:8686
+    database: influxdb
+    username: platform
+    password:
+    tags:
+        dc: bjdt

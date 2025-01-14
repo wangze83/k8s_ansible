@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: check-pod 
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: kubernetes.io/hostname
+            operator: In
+            values:
+            #- {{ hostvars[inventory_hostname] }}
+            - docker1300idc.wz.net
+  containers:
+  - name: check-pod
+    image: nginx 
+    prot: 80

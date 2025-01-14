@@ -1,0 +1,9 @@
+- template:
+    src="../templates/direct.xml.j2"
+    dest="/etc/firewalld/direct.xml"
+  register: sync_direct
+- command: firewall-cmd --reload
+  when: sync_direct.changed
+
+# usage: --direct --add-rule { ipv4 | ipv6 | eb } <table> <chain> <priority> <args>
+# - command: firewall-cmd --direct --add-rule ipv4 filter DOCKER-ISOLATION 1 -p tcp -d 220.181.158.248 --dport 25 -m comment --comment "mail-iris smtp" -j RETURN

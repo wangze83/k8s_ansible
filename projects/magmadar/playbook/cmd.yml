@@ -1,0 +1,11 @@
+---
+- hosts: "{{ dc }}"
+  remote_user: group
+  tasks:
+    - supervisorctl: name="magmadar-ng:" state=present
+    - command: "supervisorctl {{ cmd }} magmadar-ng:"
+      register: output
+    - debug: var=output.stdout_lines
+  sudo: no
+  gather_facts: no
+

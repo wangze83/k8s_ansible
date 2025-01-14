@@ -1,0 +1,43 @@
+- name: copy .repo
+  copy: 
+    src: ".repo"
+    dest: "/etc/yum.repos.d/ADDOPS.repo"
+
+
+- name: install fuse
+  yum:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - fuse
+    - fuse-devel
+    - pam-devel
+    - -auto-lxcfs
+
+
+- name: create lxcfs dir
+  file:
+    state: directory
+    path: "/var/lib/lxc/lxcfs"
+
+
+- name: start lxcfs
+  service: 
+    name: "lxcfs"
+    state: started
+    enabled: true
+
+
+- name: modify /usr/local/bin/container_remount_lxcfs.sh
+  lineinfile:
+    path: /usr/local/bin/container_remount_lxcfs.sh
+    regexp: "^containers=.*"
+    line: "containers=$(/usr/bin/docker ps | grep -v -E 'cattle-prometheus|cattle-system|kube-system|wz-system'| grep k8s_ | grep -v pause | awk '{print $1}' | grep -v CONTAINE)/"
+  notify: restart lxcfs
+
+
+
+
+
+
+

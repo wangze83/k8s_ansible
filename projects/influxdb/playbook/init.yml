@@ -1,0 +1,23 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+    - yum: name=ack,htop,sysstat,mlocate,bash-completion,vim state=latest
+    - yum: name=* state=latest exclude=kernel*,centos-release*
+
+    - command: tuned-adm profile latency-performance
+
+    - yum: name=ntp state=latest
+    - service: name=ntpd enabled=yes
+    - service: name=ntpd state=started
+
+    - yum: name=numad state=latest
+    - service: name=numad enabled=yes
+    - service: name=numad state=started
+
+    - file: path="/data/usr" state=directory
+    - file: path="/data/var" state=directory
+    - file: path="/data/var/lib" state=directory
+    - file: path="/data/var/run" state=directory mode=777
+    - file: path="/data/log" state=directory mode=777
+  sudo: yes
+  gather_facts: no

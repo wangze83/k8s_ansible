@@ -1,0 +1,18 @@
+- user: name=ceph shell=/bin/bash
+- copy: src=../files/Ceph.repo dest=/etc/yum.repos.d/
+- yum: name=librbd1-{{ ceph_version }},ceph-common-{{ ceph_version }},python-rados-{{ ceph_version }},python-rbd-{{ ceph_version }},python-cephfs-{{ ceph_version }},ceph-{{ ceph_version }},librados2-{{ ceph_version }},libcephfs1-{{ ceph_version }} state=installed
+
+# SCP-302
+#- copy: src=../files/ceph-3.10.0-514.10.2.el7.ttm.x86_64.ko dest=/lib/modules/3.10.0-514.10.2.el7.ttm.x86_64/kernel/fs/ceph/ceph.ko
+
+- file: path="/ceph/software/ceph/var/run/ceph" state=directory owner=ceph group=ceph
+- file: path="/ceph/software/ceph/var/log" state=directory owner=ceph group=ceph
+- copy: src=../files/{{ ceph_conf }} dest=/etc/ceph/ceph.conf
+- template:
+    src="../templates/ceph.keyring.j2"
+    dest="/etc/ceph/ceph.client.search.keyring"
+
+# rbd -p k8s_pool --id search create --size 10000 k8s_pv_10-00 --image-format 2
+# rbd showmapped
+# rbd rm
+

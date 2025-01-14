@@ -1,0 +1,51 @@
+# Default values for gpushare-installer.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+masterCount: 3
+
+pullImageByVPCNetwork: false
+
+regionId: cn-beijing
+
+images:
+   extender:
+      image: "x.wz.net/x./gpushare-scheduler-extender"
+      tag: 1.5.0
+      pullPolicy: IfNotPresent
+   installer:
+      image: "registry.cn-beijing.aliyuncs.com/acs/scheduler-configtool"
+      tag: v0.6.0
+      pullPolicy: IfNotPresent
+   devicePlugin:
+      image: "x.wz.net/x./gpushare-device-plugin"
+      tag: 1.5.0
+      pullPolicy: IfNotPresent
+   evictor:
+      image: "registry.cn-beijing.aliyuncs.com/acs/nvidia-device-plugin-evict"
+      tag: v1.0.1-4e418f1-aliyun
+      pullPolicy: IfNotPresent
+   recover:
+      image: "registry.cn-beijing.aliyuncs.com/acs/nvidia-device-plugin-recover"
+      tag: v1.0.1-4e418f1-aliyun
+      pullPolicy: IfNotPresent
+   vgpuInstaller:
+      image: "vgpuinstaller"
+      tag: v0.8.13
+      pullPolicy: IfNotPresent
+   kubectlInspectVGPU:
+      image: "x.wz.net/x./inspector-build-container"
+      tag: 1.5.0
+      pullPolicy: IfNotPresent
+
+vgpuInstaller:
+  enable: false
+  checkRegions: "true"
+  financeCloudImageTag: "v0.8.16-fin"
+  regions: "cn-hangzhou,cn-beijing,cn-shanghai,cn-zhangjiakou,cn-shenzhen,cn-chengdu,us-east-1,cn-heyuan,ap-southeast-1,ap-southeast-5,cn-hongkong,cn-shanghai-finance-1,cn-shenzhen-finance-1,cn-hangzhou-finance"
+
+schedulerConfig:
+  fileName: "scheduler-policy-config.json"
+  type: "extender"
+  extenderPort: "32761"
+  autoConfigScheduler: true

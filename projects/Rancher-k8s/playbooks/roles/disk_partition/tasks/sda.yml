@@ -1,0 +1,34 @@
+- name: create LV
+  lvol:
+    vg: VolGroup00
+    lv: LogVol04
+    state: present
+    size: 100%FREE
+    shrink: no
+  tags:
+  - disk
+
+- name: format filesystem
+  filesystem:
+    fstype: xfs
+    dev: /dev/VolGroup00/LogVol04
+    opts: '-n ftype=1'
+  tags:
+  - disk
+
+- name: create mount point
+  file:
+    state: directory
+    path: /var/lib/docker
+  tags:
+  - disk
+
+- name: mount /var/lib/docker
+  mount:
+    src: /dev/VolGroup00/LogVol04
+    path: /var/lib/docker
+    fstype: xfs
+    opts: "defaults,pquota"
+    state: mounted
+  tags:
+  - disk

@@ -1,0 +1,15 @@
+- name: restart docker
+  service:
+    name: docker
+    state: started
+
+
+- name: restart lxcfs
+  service:
+    name: lxcfs
+    state: started
+
+- name: restart zabbix-agent
+  service:
+    name: zabbix-agent
+    state: started

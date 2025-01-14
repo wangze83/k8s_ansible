@@ -1,0 +1,21 @@
+datacenter: idc
+
+
+# Telegraf
+telegraf_bin: telegraf-0.13.1
+telegraf_home: /data/usr/telegraf
+telegraf_user: group
+telegraf_group: group
+telegraf_config: /data/usr/telegraf/telegraf.conf
+telegraf_pid: /data/var/run/telegraf.pid
+telegraf_log: /data/log/telegraf.log
+
+
+telegraf_influxdb:
+    url: http://xxxx:8686
+    database: influxdb
+    username: platform
+    password:
+    tags:
+        dc: idc
+

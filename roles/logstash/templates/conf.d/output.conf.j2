@@ -1,0 +1,8 @@
+output {
+{% if ls_outputs != "" %}
+  stdout { codec => rubydebug }
+{% else %}
+  {{ ls_outputs }}
+{% endif %}
+}
+

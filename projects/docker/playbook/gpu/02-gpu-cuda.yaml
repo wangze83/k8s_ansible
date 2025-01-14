@@ -1,0 +1,40 @@
+---
+- hosts: "{{ group }}"
+  serial: 5
+  vars:
+    gpu_cuda_version: cuda-repo-rhel7-9-0-local-9.0.176-1.x86_64.rpm
+    gpu_cuda_patch_version: cuda-repo-rhel7-9-0-176-local-patch-4-1.0-1.x86_64.rpm
+    gpu_cuda_update_1: cuda-repo-rhel7-9-0-local-cublas-performance-update-1.0-1.x86_64.rpm
+    gpu_cuda_update_2: cuda-repo-rhel7-9-0-local-cublas-performance-update-2-1.0-1.x86_64.rpm
+    gpu_cuda_update_3: cuda-repo-rhel7-9-0-local-cublas-performance-update-3-1.0-1.x86_64.rpm
+  tasks:
+    - name: Copy CUDA Base
+      copy: src=../../files/cuda-9.0/{{ gpu_cuda_version }} dest=/tmp/ mode=755
+    - name: Copy CUDA patch
+      copy: src=../../files/cuda-9.0/{{ gpu_cuda_patch_version }} dest=/tmp/ mode=755
+    - copy: src=../../files/cuda-9.0/{{ gpu_cuda_update_1 }} dest=/tmp/ mode=755
+    - copy: src=../../files/cuda-9.0/{{ gpu_cuda_update_2 }} dest=/tmp/ mode=755
+    - copy: src=../../files/cuda-9.0/{{ gpu_cuda_update_3 }} dest=/tmp/ mode=755
+    - name: Install CUDA repo
+      yum: name=/tmp/{{ gpu_cuda_version }} state=present
+    - name: Install CUDA patch
+      yum: name=/tmp/{{ gpu_cuda_patch_version }} state=present
+    - name: Yum clean cache
+      command: yum clean all
+    - name: Yum install cuda
+      command: yum install -y cuda
+    # install cudnn
+    - name: Copy cudnn.h to cuda
+      copy: src=../../files/cuda-9.0/cudnn/include/cudnn.h dest=/usr/local/cuda/include 
+    - name: Copy libcudnn* to cuda
+      copy: src=../../files/cuda-9.0/cudnn/lib64/libcudnn.so dest=/usr/local/cuda/lib64
+    - copy: src=../../files/cuda-9.0/cudnn/lib64/libcudnn.x.7 dest=/usr/local/cuda/lib64
+    - copy: src=../../files/cuda-9.0/cudnn/lib64/libcudnn.x.7.0.5 dest=/usr/local/cuda/lib64
+    - copy: src=../../files/cuda-9.0/cudnn/lib64/libcudnn_static.a dest=/usr/local/cuda/lib64
+    - name: Chmod cudnn
+      command: chmod a+r /usr/local/cuda/include/cudnn.h /usr/local/cuda/lib64/libcudnn.so /usr/local/cuda/lib64/libcudnn.x.7 /usr/local/cuda/lib64/libcudnn.x.7.0.5 /usr/local/cuda/lib64/libcudnn_static.a
+    - name: Ldconfig cuda
+      command: ldconfig /usr/local/cuda/lib64
+      ignore_errors: yes
+  become: yes
+  gather_facts: true

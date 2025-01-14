@@ -1,0 +1,7 @@
+---
+
+- fail: msg="es_instance_name must be specified and cannot be blank"
+  when: es_instance_name is not defined or es_instance_name == ''
+
+- fail: msg="es_config['discovery.zen.ping.unicast.hosts'] must be specified"
+  when: es_config['discovery.zen.ping.unicast.hosts'] is not defined

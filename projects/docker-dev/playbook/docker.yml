@@ -1,0 +1,64 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+    - name: 复制docker的repo 
+      copy: 
+        src: ../files/Docker.repo 
+        dest: /etc/yum.repos.d/
+    - name: 安装相关依赖
+      yum: 
+        name: deltarpm.x86_64 
+        state: present 
+    - name: 安装17.03.0.ce-1.el7.centos版本docker-engine
+      yum: 
+        name: docker-engine-17.03.0.ce-1.el7.centos
+        state: present 
+    - name: 复制docker系统服务
+      copy: 
+        src: ../files/system/docker.service.d 
+        dest: /etc/systemd/system/
+    - name: 检查linux系统配置文件中，网桥arptables的设定开启
+      lineinfile:
+        dest: /etc/sysctl.d/99-sysctl.conf
+        state: present
+        line: "net.bridge.bridge-nf-call-arptables = 1"
+    - name: 检查linux系统配置文件中，网桥ip6tables的设定开启
+      lineinfile:
+        dest: /etc/sysctl.d/99-sysctl.conf
+        state: present
+        line: "net.bridge.bridge-nf-call-ip6tables = 1"
+    - name: 检查linux系统配置文件中，网桥iptables的设定开启 
+      lineinfile:
+        dest: /etc/sysctl.d/99-sysctl.conf
+        state: present
+        line: "net.bridge.bridge-nf-call-iptables = 1"
+    - name: 重启系统服务
+      command: systemctl daemon-reload
+    - name: 启用docker
+      service: 
+        name: docker 
+        enabled: yes
+    - name: 启动docker
+      service: 
+        name: docker 
+        state: started
+    - name: 部署container清理crontab
+      cron:
+        name: "clean docker container"
+        minute: "0"
+        hour: "1"
+        job: "docker ps -a | grep -v Up | grep -v 'CONTAINER ID' | xargs docker rm"
+    - name: 部署image清理crontab
+      cron:
+        name: "clean docker image"
+        minute: "30"
+        hour: "1"
+        job: "docker images | grep -E 'months ago|years ago' | awk 'BEGIN { OFS=\":\"  } {print $1,$2} ' |grep -v 'wz.cloud/library|wz.cloud/infra|wz.cloud/mirror' | grep -v none |  xargs docker rmi"
+    - name: 部署none image清理crontab
+      cron:
+        name: "clean docker none image"
+        minute: "30"
+        hour: "2"
+        job: "docker images | grep '<none>' | awk '{print $3}' | xargs docker rmi"
+  become: yes
+  gather_facts: no

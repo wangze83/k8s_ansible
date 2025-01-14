@@ -1,0 +1,56 @@
+- hosts: '{{group}}'
+  vars_files:
+    # - ../inventory/host_vars/{{ansible_nodename}}
+    - ../inventory/group_vars/{{group}}.yaml
+  tasks:
+    - set_fact:
+        device_path_prefix: '/dev/rbd/k8s_pool'
+        node: '{{nodes_map[inventory_hostname]}}'
+    - set_fact:
+        images:
+          [
+            'minio_{{group}}_node{{node}}_2000-1',
+            'minio_{{group}}_node{{node}}_2000-2',
+          ]
+    - debug:
+        msg: 'images: {{images}} prefix: {{device_path_prefix}}'
+    # rbd 准备工作
+    # rbd 自动 map 脚本
+    - copy: src=../files/rbdmap dest=/etc/init.d/rbdmap
+    # rbd 自动 map 映射表
+    - template: src="../templates/rbdmap.j2" dest="/etc/ceph/rbdmap" backup=yes
+    - service: name=rbdmap enabled=yes
+    - service: name=rbdmap state=reloaded
+    # 格式化 rbd，
+    - filesystem:
+        fstype: xfs
+        dev: '{{device_path_prefix}}/{{item}}'
+      with_items: '{{images}}'
+    # 自动挂载
+    - mount:
+        backup: yes
+        path: '/mnt/minio{{index+1}}/'
+        src: '{{device_path_prefix}}/{{item}}'
+        state: mounted
+        fstype: xfs
+        opts: defaults,_netdev
+      loop: '{{ images|flatten(levels=1) }}'
+      loop_control:
+        index_var: index
+    # 安装配置 minio
+    # minio binary
+    - copy: src=../files/minio dest=/data/usr/minio/ mode=755
+    # minio service
+    - template: src="../templates/minio.service.j2" dest="/etc/systemd/system/minio.service"
+    - shell: systemctl daemon-reload
+    - service: name=minio enabled=yes
+    - service: name=minio state=restarted
+    # 防火墙端口
+    - firewalld:
+        zone: public
+        port: 9000/tcp
+        permanent: yes
+        state: enabled
+    - shell: firewall-cmd --reload
+  become: yes
+  gather_facts: no

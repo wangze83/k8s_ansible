@@ -1,0 +1,36 @@
+---
+
+# 300G + 1.5T
+#
+# NAME                    MAJ:MIN RM   SIZE RO TYPE MOUNTPOINT
+# sda                       8:0    0 279.5G  0 disk 
+# ├─sda1                    8:1    0     1G  0 part /boot
+# └─sda2                    8:2    0 278.5G  0 part 
+#   ├─VolGroup00-LogVol03 253:0    0    20G  0 lvm  /
+#   ├─VolGroup00-LogVol00 253:1    0     4G  0 lvm  [SWAP]
+#   ├─VolGroup00-LogVol02 253:2    0     4G  0 lvm  /var
+#   └─VolGroup00-LogVol01 253:3    0     1G  0 lvm  /tmp
+# nvme0n1                 259:0    0   1.5T  0 disk
+
+- hosts: "{{ group }}"
+  tasks:
+    # Path: /tmp
+    - lvol: vg=VolGroup00 lv=LogVol01 size=16g
+    - command: xfs_growfs /dev/VolGroup00/LogVol01
+    # Path: /var
+    - lvol: vg=VolGroup00 lv=LogVol02 size=160g
+    - command: xfs_growfs /dev/VolGroup00/LogVol02
+    # Path: /
+    - lvol: vg=VolGroup00 lv=LogVol03 size=98g
+    - command: xfs_growfs /dev/VolGroup00/LogVol03
+
+    - lvg: vg=VolGroup01 pvs=/dev/nvme0n1
+    # Docker thin pool
+    - command: lvcreate -L 300g --thin VolGroup01/ThinPool00
+
+    - file: state=directory path=/da1
+    - lvol: vg=VolGroup01 lv=LogVol00 size=1000g
+    - filesystem: fstype=xfs dev=/dev/VolGroup01/LogVol00
+    - mount: name=/da1 src=/dev/VolGroup01/LogVol00 fstype=xfs opts="defaults" state=mounted
+  become: yes
+  gather_facts: no

@@ -1,0 +1,33 @@
+- hosts: '{{group}}'
+  vars_files:
+    - ../inventory/group_vars/{{group}}.yaml
+  tasks:
+    - set_fact:
+        device_path_prefix: '/dev/rbd/k8s_pool'
+        node: '{{nodes_map[inventory_hostname]}}'
+    - set_fact:
+        images:
+          [
+            'minio_{{group}}_node{{node}}_2000-1',
+            'minio_{{group}}_node{{node}}_2000-2',
+          ]
+    - debug:
+        msg: 'images: {{images}} prefix: {{device_path_prefix}}'
+    - mount:
+        backup: yes
+        path: '/mnt/minio{{index+1}}/'
+        src: '{{device_path_prefix}}/{{item}}'
+        state: unmounted
+        fstype: xfs
+        opts: defaults,_netdev
+      loop: '{{ images|flatten(levels=1) }}'
+      loop_control:
+        index_var: index
+    # 格式化 rbd，
+    - filesystem:
+        force: yes
+        fstype: xfs
+        dev: '{{device_path_prefix}}/{{item}}'
+      with_items: '{{images}}'
+  become: yes
+  gather_facts: no

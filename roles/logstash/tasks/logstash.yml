@@ -1,0 +1,19 @@
+---
+
+- name: Create logstash dir
+  file: state=directory path={{ ls_instance_home }} owner={{ ls_user }} group={{ ls_group }} recurse=yes
+
+- unarchive:
+    src="releases/logstash-{{ ls_release }}.tar.gz"
+    dest="{{ ls_instance_home }}"
+    creates="{{ ls_instance_home }}/logstash-{{ ls_release }}"
+
+- file:
+    path="{{ ls_instance_home }}/logstash-{{ ls_release }}"
+    owner={{ ls_user }} group={{ ls_group }} recurse=yes
+
+- file:
+    path="{{ ls_home }}"
+    src="{{ ls_instance_home }}/logstash-{{ ls_release }}"
+    owner={{ ls_user }} group={{ ls_group }} state=link
+

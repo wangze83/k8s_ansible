@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    name: kube-eventer
+  name: kube-eventer
+  namespace: wz-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kube-eventer
+  template:
+    metadata:
+      labels:
+        app: kube-eventer
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+    spec:
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccount: kube-eventer
+      containers:
+        - image: harbor.wz.cn/rancher/kube-eventer:master-master-202110261254-7ce82bb
+          name: kube-eventer
+          command:
+            - /kube-eventer
+            - --source=kubernetes:https://kubernetes.default
+            - --sink=webhook:https://k8s.wz.net/openapi/v1/gateway/action/send-events?apikey=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJqaWRvbmdkb25nIiwiaWF0IjoxNjM1MzE2ODcwLCJpc3MiOiJzdGFyayJ9.OiIYAa6sDGAQ09QrKqTO1d_SvO13zQ_QLKBWl2z8lvGSEDNMXd0IXSdfXkQSm6SOnnHkXtIUpXTaGQRwVLAdYQldLz4yv_IjXUk8nJUW8pfAQNZbHOXqunyUOHTCvrxjul-coVWFAIYEHWSS0eqaoQW5QXukj_G_hyxMUfkKU5s&method=POST
+          env:
+          # If TZ is assigned, set the TZ value as the time zone
+          - name: TZ
+            value: "Asia/Shanghai"
+          - name: CLUSTER
+            value: "so-gpu-idc"
+          volumeMounts:
+            - name: localtime
+              mountPath: /etc/localtime
+              readOnly: true
+            - name: zoneinfo
+              mountPath: /usr/share/zoneinfo
+              readOnly: true
+          resources:
+            requests:
+              cpu: 1010m
+              memory: 1024Mi
+            limits:
+              cpu: 1010m
+              memory: 1024Mi
+      volumes:
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
+        - name: zoneinfo
+          hostPath:
+            path: /usr/share/zoneinfo
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kube-eventer
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - events
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kube-eventer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-eventer
+subjects:
+  - kind: ServiceAccount
+    name: kube-eventer
+    namespace: wz-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-eventer
+  namespace: wz-system

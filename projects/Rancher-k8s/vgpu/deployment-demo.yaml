@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: amp-vgpu-test
+  name: amp-vgpu-test
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: test-vgpu-001
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: test-vgpu-001
+    spec:
+      containers:
+      - command:
+        - sh
+        - -c
+        - sleep infinity;
+        env:
+        - name: AMP_VGPU_ENABLE
+          value: "1"
+        - name: AMP_USE_HOST_DAEMON
+          value: "1"
+        - name: NVIDIA_DRIVER_CAPABILITIES
+          value: all
+        image: registry.cn-beijing.aliyuncs.com/ai-samples/tensorflow:1.5.0-devel-gpu
+        imagePullPolicy: IfNotPresent
+        name: test-vgpu-001
+        resources:
+          limits:
+            aliyun.com/gpu-count: 1
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      nodeName: gpunode4023idc.wz.net
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30

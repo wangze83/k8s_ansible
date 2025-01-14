@@ -1,0 +1,127 @@
+---
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: rancher
+  labels:
+    app: rancher
+    
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: rancher
+  labels:
+    app: rancher
+subjects:
+- kind: ServiceAccount
+  name: rancher
+  namespace: cattle-system
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+  
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Issuer
+metadata:
+  name: rancher
+  labels:
+    app: rancher
+spec:
+  ca:
+    secretName: tls-rancher
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rancher
+  labels:
+    app: rancher
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+    nodePort: 30001
+  - port: 443
+    targetPort: 443
+    protocol: TCP
+    name: https
+    nodePort: 30wz
+  type: NodePort
+  selector:
+    app: rancher
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: rancher
+  labels:
+    app: rancher
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: rancher
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: rancher
+    spec:
+      serviceAccountName: rancher
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - rancher
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - image: wzcontainer/rancher:pub-1.3
+        imagePullPolicy: IfNotPresent
+        name: rancher
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        args:
+        - "--http-listen-port=80"
+        - "--https-listen-port=443"
+        - "--add-local=false"
+        env:
+        - name: CATTLE_NAMESPACE
+          value: cattle-system
+        - name: CATTLE_PEER_SERVICE
+          value: rancher
+        - name: CATTLE_SYSTEM_CATALOG
+          value: bundled
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 30
+        resources:
+          {}
+        volumeMounts:
+      volumes:

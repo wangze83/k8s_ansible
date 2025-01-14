@@ -1,0 +1,2 @@
+- local_action: "command kubectl --kubeconfig ~/.kube/{{ hostvars[inventory_hostname].group_names[0] }} uncordon {{inventory_hostname}}"
+  become: false

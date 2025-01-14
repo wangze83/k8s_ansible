@@ -1,0 +1,14 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+   # update filebeat config
+# - file: path="/var/log/pods" state=directory
+
+  # pull hyperkube image
+  - command: docker pull r.wz.cloud/google_containers/hyperkube:v1.7.2
+  # stop master component
+  - command: mv {{ kube_home }}/manifests/kube-apiserver.yaml {{ kube_home }}
+  - command: mv {{ kube_home }}/manifests/kube-controller-manager.yaml {{ kube_home }}
+  - command: mv {{ kube_home }}/manifests/kube-scheduler.yaml {{ kube_home }}
+  become: yes
+  gather_facts: yes

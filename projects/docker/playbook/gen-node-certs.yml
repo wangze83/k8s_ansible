@@ -1,0 +1,5 @@
+- name: gen node cert
+  shell: cd ../files/node-certs/docker_certs && ./gen_node_cert.sh {{ inventory_hostname }}
+  delegate_to: localhost
+  become: false
+

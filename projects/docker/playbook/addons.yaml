@@ -1,0 +1,19 @@
+---
+- hosts: '{{ group }}'
+  serial: 5
+  become: yes
+  gather_facts: yes
+  vars:
+    lxcfs_rpm: lxcfs-3.0.3-1.x86_64.rpm
+    sysdig_rpm: sysdig-0.24.2-x86_64.rpm
+  tasks:
+    - copy: src=../../lxcfs/files/{{ lxcfs_rpm }} dest=/tmp
+    - yum: name=/tmp/{{ lxcfs_rpm }} state=present
+    - service: name=lxcfs enabled=yes
+    - service: name=lxcfs state=started
+
+      #暂时没有找到sysdig的包 先给备注了
+      #- copy: src=../files/{{ sysdig_rpm }} dest=/tmp
+      #- yum: name=/tmp/{{ sysdig_rpm }} state=present
+
+    - copy: src=../files/sudoers.d.search dest=/etc/sudoers.d/search

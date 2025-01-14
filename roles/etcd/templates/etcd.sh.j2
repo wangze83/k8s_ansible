@@ -1,0 +1,58 @@
+#!/bin/sh
+#
+# Startup script for etcd
+#
+
+. /etc/init.d/functions
+
+RCFILE={{ etcd_rc }}
+if [ -f $RCFILE ]; then
+    . $RCFILE
+else
+    failure
+    echo
+    printf "Etcd environment variables file etcd.rc NOT EXISTS!\n"
+    exit 255
+fi
+
+ETCD="{{ etcd_home }}/etcd/etcd"
+ETCDCTL="{{ etcd_home }}/etcd/etcdctl"
+PIDFILE={{ etcd_pid }}
+LOGFILE={{ etcd_log }}
+
+start() {
+    nohup $ETCD >>$LOGFILE 2>&1 & echo $! > $PIDFILE
+
+    RETVAL=$?
+    return $RETVAL
+}
+
+stop() {
+    killproc -p $PIDFILE $ETCD
+
+    RETVAL=$?
+    return $RETVAL
+}
+
+restart() {
+    stop
+    start
+}
+
+status() {
+    $ETCDCTL cluster-health
+
+    RETVAL=$?
+    return $RETVAL
+}
+
+case "$1" in
+  start)   start;;
+  stop)    stop;;
+  restart) restart;;
+  status)  status;;
+  *)       echo "Usage: $0 {start|stop|restart|status}"
+           RETVAL=2;;
+esac
+exit $RETVAL
+

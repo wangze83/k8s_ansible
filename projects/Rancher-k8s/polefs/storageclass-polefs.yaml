@@ -1,0 +1,21 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: polefs-storageclass
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: csi.share.com
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+parameters:
+  masterAddr: "10.1.1.1:9500,10.1.1.1:9500,10.1.1.1:9500"
+  csi.storage.k8s.io/provisioner-secret-name: polefs-secret
+  csi.storage.k8s.io/provisioner-secret-namespace: wz-system
+  csi.storage.k8s.io/node-publish-secret-name: polefs-secret
+  csi.storage.k8s.io/node-publish-secret-namespace: wz-system
+  csi.storage.k8s.io/node-stage-secret-name: polefs-secret
+  csi.storage.k8s.io/node-stage-secret-namespace: wz-system
+  csi.storage.k8s.io/controller-expand-secret-name: polefs-secret
+  csi.storage.k8s.io/controller-expand-secret-namespace: wz-system
+  logLevel: "warn"
+  FullPathName: "false"

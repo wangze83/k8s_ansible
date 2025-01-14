@@ -1,0 +1,18 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+    - name: 安装系统工具
+      yum: name=ack,htop,sysstat,mlocate,bash-completion,vim state=latest
+
+    - name: 调整服务器配置
+      command: tuned-adm profile throughput-performance
+
+    - yum: name=ntp state=latest
+    - service: name=ntpd enabled=yes
+    - service: name=ntpd state=started
+
+    - yum: name=numad state=latest
+    - service: name=numad enabled=yes
+    - service: name=numad state=started
+  become: yes
+  gather_facts: no

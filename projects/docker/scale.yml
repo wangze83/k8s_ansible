@@ -1,0 +1,70 @@
+---
+# 执行此playbook前先申请group用户
+- hosts: "{{ group }}"
+  any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
+  gather_facts: true
+  tasks:
+    - block:
+      # 检查机器内核版本
+      - name: Pre | check if kernel version is "4.19.136"
+        assert:
+          msg: "Hosts' kernel version must be 4.19.136"
+          that:
+            - ansible_kernel is version(hosts_kernel_version, "=")
+        when: skip_check_kernel is false
+      # 安装cfssl
+      - name: Pre | check if cfssl already installed
+        stat:
+          path: "/usr/local/bin/cfssl"
+          get_attributes: no
+          get_checksum: no
+          get_mime: no
+        register: need_install_cfssl
+        delegate_to: localhost
+        connection: local
+      - name: Pre | istall cfssl(1)
+        command: "wget https://pkg.cfssl.org/R1.2/{{ item }}_linux-amd64 /usr/local/bin/{{ item }}"
+        with_items:
+          - cfssl
+          - cfssljson
+          - cfssl-certinfo
+        when:
+          - not need_install_cfssl.stat.exists
+        become: true
+        delegate_to: localhost
+        connection: local
+      - name: Pre | install cfssl(2)
+        command: "chmod +x /usr/local/bin/cfssl*"
+        when:
+          - not need_install_cfssl.stat.exists
+        become: true
+        delegate_to: localhost
+        connection: local
+      tags: pre
+
+# 开启lldp
+- name: Join | open lldp and calico init
+  import_playbook: playbook/calico-init.yaml
+  tags: lldp
+
+# 磁盘分区
+- name: Join | make disk partition(lvm)
+  tags: disk
+  import_playbook: playbook/disk-partition.yaml
+
+# calico-nosa
+- name: Join | calico nosa
+  tags: calico
+  import_playbook: playbook/calico-nosa.yaml
+
+# 开始扩容
+- name: Join | join node to kubernetes cluster
+  tags: main
+  import_playbook: playbook/main.yml
+
+# check_pod
+- name: Check | run check pod
+  tags: check
+  import_playbook: playbook/check-pod.yml
+
+# 最后打开节点cordonn

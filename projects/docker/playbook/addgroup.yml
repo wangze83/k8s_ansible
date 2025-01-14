@@ -1,0 +1,10 @@
+- name: add group
+  group:
+  name: "{{ kube_user }}"
+  state: present     
+- name: add user
+  user:
+  name: "{{ kube_user }}"
+  state: present
+  group: "{{ kube_user }}"
+  append: yes

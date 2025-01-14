@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: nvidia-driver-daemonset
+  name: nvidia-driver-daemonset
+  namespace: gpu-operator-resources
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: nvidia-driver-daemonset
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+      creationTimestamp: null
+      labels:
+        app: nvidia-driver-daemonset
+    spec:
+      containers:
+      - args:
+        - init
+        command:
+        - nvidia-driver
+        image: harbor.wz.cn/nvidia/driver:460.32.03-centos7
+        imagePullPolicy: IfNotPresent
+        name: nvidia-driver-ctr
+        resources: {}
+        securityContext:
+          privileged: true
+          seLinuxOptions:
+            level: s0
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        resources:
+          limits:
+            cpu: "10"
+            memory: 10Gi
+          requests:
+            cpu: "250m"
+            memory: 256Mi
+        volumeMounts:
+        - mountPath: /run/nvidia
+          mountPropagation: Bidirectional
+          name: run-nvidia
+        - mountPath: /etc/containers/oci/hooks.d
+          name: config
+      dnsPolicy: ClusterFirstWithHostNet
+      priorityClassName: system-node-critical
+      hostNetwork: true
+      hostPID: true
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /run/nvidia
+          type: ""
+        name: run-nvidia
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: oci-nvidia-hook-json
+            path: oci-nvidia-hook.json
+          name: nvidia-driver
+        name: config
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate

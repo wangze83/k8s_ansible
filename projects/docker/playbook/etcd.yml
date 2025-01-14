@@ -1,0 +1,22 @@
+---
+- hosts: "{{ group }}"
+ #vars_files:
+ #  - ../inventory/vars/idc1-dev
+  vars:
+    etcd_cert: /data/usr/etcd/certs/{{ inventory_hostname }}.pem
+    etcd_key: /data/usr/etcd/certs/{{ inventory_hostname }}-key.pem
+    etcd_peer_cert: /data/usr/etcd/certs/{{ inventory_hostname }}.pem
+    etcd_peer_key: /data/usr/etcd/certs/{{ inventory_hostname }}-key.pem
+  roles:
+    - etcd
+  tasks:
+    - include_tasks: "certs.yml"
+    - file: path={{ etcd_home }}/certs state=absent
+    - file: path={{ etcd_home }}/certs src=/data/usr/certs state=link force=true
+    #- firewalld: permanent=yes zone=public port=2379-2380/tcp state=enabled immediate=yes
+
+    # After upload certs
+    - service: name=etcd-{{ etcd_config['client-port'] }} enabled=yes
+    - service: name=etcd-{{ etcd_config['client-port'] }} state=started
+  become: yes
+  gather_facts: yes

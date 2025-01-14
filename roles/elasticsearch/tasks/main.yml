@@ -1,0 +1,6 @@
+---
+- include: validate.yml
+- include: java.yml
+- include: elasticsearch.yml
+- include: elasticsearch-config.yml
+- include: elasticsearch-service.yml

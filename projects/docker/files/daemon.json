@@ -1,0 +1,5 @@
+{
+  "registry-mirrors": ["https://8dexs4ag.mirror.aliyuncs.com"],
+  "live-restore": true,
+  "init": true
+}

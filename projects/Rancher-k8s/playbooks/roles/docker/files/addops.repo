@@ -1,0 +1,16 @@
+# ADDOPS.repo
+#
+# Some description sentence...
+#
+
+[ADDOPS-base]
+name=ADDOPS-\$releasever - Base
+baseurl=http://mirroharbor.wz.cn:8wz//\$releasever/os/\$basearch/
+gpgcheck=0
+
+#released updates
+[ADDOPS-updates]
+name=ADDOPS-\$releasever - Updates
+baseurl=http://mirroharbor.wz.cn:8wz//\$releasever/updates/\$basearch/
+gpgcheck=0
+enabled=0

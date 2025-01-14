@@ -1,0 +1,17 @@
+[Unit]
+Description=Time series data processing engine.
+Documentation=https://github.com/influxdb/kapacitor
+After=network.target
+
+[Service]
+User={{ kapacitor_user }}
+Group={{ kapacitor_group }}
+LimitNOFILE=65536
+EnvironmentFile=-/etc/default/kapacitor
+ExecStart={{ kapacitor_home }}/kapacitor/usr/bin/kapacitord -config {{ kapacitor_conf }} $KAPACITOR_OPTS
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+Alias=kapacitor.service

@@ -1,0 +1,42 @@
+---
+- hosts: "{{ group }}"
+ #vars_files:
+ #  - ../inventory/vars/idc1-dev
+  vars:
+    iface: eth2
+  tasks:
+    - command: ethtool {{ iface }}
+      register: result
+      ignore_errors: yes
+    - set_fact:
+        iface: eth0
+      when: result is failed
+
+    - yum: name=flannel state=latest
+    - include_tasks: "certs.yml"
+    - copy: src=../files/certs dest=/etc/flannel/
+    - find: paths="/etc/flannel/certs" patterns="*key*"
+      register: private_keys
+    - file: path="{{ item.path }}" mode=0600
+      with_items: "{{ private_keys.files }}"
+    - template: src=../templates/flanneld.j2 dest=/etc/sysconfig/flanneld
+
+#    - firewalld: permanent=yes zone=trusted port=8472/udp state=enabled immediate=yes
+#    - firewalld: permanent=yes zone=trusted source='172.17.0.0/16' state=enabled immediate=yes
+#    # Healthz
+#    - firewalld: permanent=yes immediate=yes zone=public port=10257/tcp state=enabled
+
+    # Replace with newer version
+    - copy: src=../files/flanneld-0.9.0 dest=/usr/bin/flanneld
+
+    - copy: src=../files/system/flanneld.service.d dest=/etc/systemd/system/
+      register: ifup_script
+    - command: systemctl daemon-reload
+      when: ifup_script.changed
+
+    # After set etcd: /wz.cloud/network/config
+    # etcdctl set /wz.cloud/network/config '{"Network": "172.17.0.0/16", "Backend": {"Type": "vxlan", "VNI": 1}, "SubnetLen": 24}'
+    - service: name=flanneld enabled=yes
+    - service: name=flanneld state=started
+  become: yes
+  gather_facts: yes

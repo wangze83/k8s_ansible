@@ -1,0 +1,15 @@
+---
+
+- name: 安装系统工具
+  yum: name=ack,htop,sysstat,mlocate,bash-completion,vim,git state=latest
+  become: yes
+
+- yum: name=ntp state=latest
+  become: yes
+- service: name=ntpd enabled=yes
+  become: yes
+- service: name=ntpd state=started
+  become: yes
+
+- include: init-virtual.yml
+- include: init-rc.yml

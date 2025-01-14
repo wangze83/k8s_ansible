@@ -1,0 +1,26 @@
+- hosts: '{{ group }}'
+  serial: 3
+  become: yes
+  gather_facts: yes
+  tasks:
+    - set_fact:
+        kubelet_client_certificate: "{{ kube_home }}/certs/{{ inventory_hostname }}.pem"
+    - set_fact:
+        kubelet_client_key: "{{ kube_home }}/certs/{{ inventory_hostname }}-key.pem"
+    - set_fact:
+        kubeproxy_client_certificate: "{{ kube_home }}/certs/{{ inventory_hostname }}.pem"
+    - set_fact:
+        kubeproxy_client_key: "{{ kube_home }}/certs/{{ inventory_hostname }}-key.pem"
+    - set_fact:
+        k8s_version: 1.10.13
+
+    - template: src=../templates/kubelet.j2 dest={{ kube_home }}/cfg/kubelet owner={{ kube_user }} group={{ kube_group }}
+    - template: src=../templates/kube-proxy.j2 dest={{ kube_home }}/cfg/kube-proxy owner={{ kube_user }} group={{ kube_group }}
+    - unarchive: src=../files/kubernetes-{{ k8s_version }}.tar.gz dest={{ kube_home }} creates={{ kube_home }}/kubernetes-{{ k8s_version }}
+    - file: path={{ kube_home }}/kubernetes-{{ k8s_version }} owner={{ kube_user }} group={{ kube_group }} recurse=yes
+    - file: path={{ kube_home }}/kubernetes src={{ kube_home }}/kubernetes-{{ k8s_version }} owner={{ kube_user }} group={{ kube_group }} state=link force=true
+
+    - include_tasks: "kubectl/drain.yml"
+    - service: name=kubelet state=restarted
+    - service: name=kube-proxy state=restarted
+    - include_tasks: "kubectl/uncordon.yml"

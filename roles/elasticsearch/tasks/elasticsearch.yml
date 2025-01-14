@@ -1,0 +1,21 @@
+---
+
+- debug: msg="Node configuration {{ es_config }} "
+
+- name: Create es dir
+  file: state=directory path={{ es_instance_home }} owner={{ es_user }} group={{ es_group }} recurse=yes
+
+- unarchive:
+    src="releases/elasticsearch-{{ es_release }}.tar.gz"
+    dest="{{ es_instance_home }}"
+    creates="{{ es_instance_home }}/elasticsearch-{{ es_release }}"
+
+- file:
+    path="{{ es_instance_home }}/elasticsearch-{{ es_release }}"
+    owner={{ es_user }} group={{ es_group }} recurse=yes
+
+- file:
+    path="{{ es_home }}"
+    src="{{ es_instance_home }}/elasticsearch-{{ es_release }}"
+    owner={{ es_user }} group={{ es_group }} state=link
+

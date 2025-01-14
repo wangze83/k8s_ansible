@@ -1,0 +1,8 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+    - template: src=../../templates/manifests/kube-apiserver.yaml.j2 dest={{ kube_home }}/manifests/kube-apiserver.yaml owner={{ kube_user }} group={{ kube_group }}
+    - template: src=../../templates/manifests/kube-controller-manager.yaml.j2 dest={{ kube_home }}/manifests/kube-controller-manager.yaml owner={{ kube_user }} group={{ kube_group }}
+    - template: src=../../templates/manifests/kube-scheduler.yaml.j2 dest={{ kube_home }}/manifests/kube-scheduler.yaml owner={{ kube_user }} group={{ kube_group }}
+  become: yes
+  gather_facts: yes

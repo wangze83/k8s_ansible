@@ -1,0 +1,14 @@
+---
+## 出口流量走eth3
+- hosts: "{{ group }}"
+  vars:
+    iface: eth0
+  vars_files:
+    - ../inventory/vars/lvs
+  tasks:
+    - template:
+        src="../templates/route-ifname.j2"
+        dest="/etc/sysconfig/network-scripts/route-{{ iface }}"
+    - shell: cat /etc/sysconfig/network-scripts/route-{{ iface }} | xargs -L 1 ip route add
+  become: yes
+  gather_facts: yes

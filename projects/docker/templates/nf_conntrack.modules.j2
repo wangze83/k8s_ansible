@@ -1,0 +1,3 @@
+#!/bin/sh
+
+exec /sbin/modprobe nf_conntrack hashsize={{ (ansible_memtotal_mb * 1024 * 1024 / 131072 / (64 / 32))|int }}

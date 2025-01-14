@@ -1,0 +1,47 @@
+{% set address = hostvars[inventory_hostname]['ansible_' + iface]['ipv4']['address'] %}
+{% set network = hostvars[inventory_hostname]['ansible_' + iface]['ipv4']['network'] %}
+{% set netmask = hostvars[inventory_hostname]['ansible_' + iface]['ipv4']['netmask'] %}
+{% set net = network + '/' + netmask -%}
+router id {{ address }};
+
+filter calico_pools {
+  if ( net ~ {{ calico_floating_pool['cidr'] }} ) then {
+    accept;
+  }
+  reject;
+}
+
+# Configure synchronization between routing tables and kernel.
+protocol kernel {
+  learn;
+  persist;
+  scan time 2;
+  import all;
+  export all;
+  graceful restart;
+}
+
+# Watch interface up/down events.
+protocol device {  debug { states };
+  scan time 2;
+}
+protocol direct {  debug { states };
+  interface "*";
+}
+
+template bgp bgp_template {  debug { states };
+  description "Connection to BGP peer";
+  local as 65188;
+  multihop;
+  gateway recursive;
+  import none;
+  export filter calico_pools;
+  next hop self;
+  source address {{ address }};
+  add paths on;
+  graceful restart;
+}
+
+protocol bgp Node_{{ net | ipaddr('net') | ipaddr('1') | ipaddr('address') | replace('.', '_') }} from bgp_template {
+  neighbor {{ net | ipaddr('net') | ipaddr('1') | ipaddr('address') }} as {{ calico_as }};
+}

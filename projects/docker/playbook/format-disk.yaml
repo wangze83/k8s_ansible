@@ -1,0 +1,95 @@
+---
+- hosts: "{{ group }}"
+  serial: 5
+  vars:
+    disk_model: none
+  tasks:
+    ## 1. 确定磁盘类型
+    - name: Storage partition md127
+      set_fact:
+        disk_model: md127
+      when:
+        #- ansible_devices['md127'] is defined
+        - ansible_devices['sda'] is defined
+        - ansible_devices['sdb'] is defined
+        - ansible_devices['sdc'] is defined
+        - ansible_devices['sdd'] is defined
+        - ansible_devices['sde'] is defined
+        - ansible_devices['sdf'] is defined
+    - name: Storage partition md125
+      set_fact:
+        disk_model: md125
+      when:
+        - ansible_devices['sda'] is defined
+        - ansible_devices['sdb'] is defined
+        - ansible_devices['sdc'] is defined
+        - ansible_devices['sdd'] is not defined
+
+    - name: Storage partition docker11
+      set_fact:
+        disk_model: docker11
+      when:
+        - ansible_devices['sda'] is defined
+        - ansible_devices['sdb'] is not defined
+
+    - name: Storage partition memdiska
+      set_fact:
+        disk_model: memdiska
+      when:
+        - ansible_devices['sda'] is defined
+        - ansible_devices['memdiska'] is defined
+        - ansible_devices['sdb'] is not defined
+
+    - name: Storage partition nvme0n1
+      set_fact:
+        disk_model: nvme0n1
+      when:
+        - ansible_devices['sda'] is defined
+        - ansible_devices['nvme0n1'] is defined
+
+    - name: Storage partition of safe
+      set_fact:
+        disk_model: safe
+      when:
+        - ansible_devices['sda'] is defined
+        - ansible_devices['sdb'] is not defined
+        - ansible_devices['nvme0n1'] is not defined
+
+    - name: Storage partition of safe-master
+      set_fact:
+        disk_model: safe_master
+      when:
+        - ansible_devices['sda'] is defined
+        - ansible_devices['sdb'] is defined
+        - ansible_devices['nvme0n1'] is not defined
+        - ansible_devices['sdc'] is not defined
+
+#        - (ansible_devices['sda']['size'] == "1.09 TB") or (ansible_devices['sda']['size']== "1.63 TB")
+    - name: 'Check parm valid'
+      fail: msg="Storage partition is not valid {{disk_model}}"
+      when: disk_model == "none"
+
+    - include_tasks: "kubectl/drain.yml"
+    - service: name=docker state=stopped
+    - command: umount /var/lib/docker
+      ignore_errors: true
+    - include_tasks: "storage-overlayfs/md127.yml"
+      when: disk_model == "md127"
+    - include_tasks: "storage-overlayfs/docker_11_17.yml"
+      when: disk_model == "docker11"
+    - include_tasks: "storage-overlayfs/memdisk.yml"
+      when: disk_model == "memdiska"
+    - include_tasks: "storage-overlayfs/nvme.yml"
+      when: disk_model == "nvme0n1"
+    - include_tasks: "storage-overlayfs/md125.yml"
+      when: disk_model == "md125"
+    - include_tasks: "storage-overlayfs/safe.yml"
+      when: disk_model == "safe"
+    - include_tasks: "storage-overlayfs/safe-master.yml"
+      when: disk_model == "safe_master"
+
+    - service: name=kubelet state=started
+    - service: name=kube-proxy state=started
+    - include_tasks: "kubectl/uncordon.yml"
+  become: yes
+  gather_facts: true

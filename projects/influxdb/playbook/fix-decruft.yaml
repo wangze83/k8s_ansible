@@ -1,0 +1,6 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+    - copy: src=../files/decruft.conf dest=/s/ops/pantheon/tools/conf/decruft
+  become: yes
+  gather_facts: no

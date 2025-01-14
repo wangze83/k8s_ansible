@@ -1,0 +1,8 @@
+- name: cp check_time.sh
+  copy: src=../files/check_time.sh dest=/tmp/check_time.sh
+
+- name: check time
+  command: sh /tmp/check_time.sh
+
+- name: clean check_time.sh
+  command: rm -f /tmp/check_time.sh

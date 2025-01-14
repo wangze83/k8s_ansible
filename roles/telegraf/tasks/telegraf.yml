@@ -1,0 +1,22 @@
+---
+
+- name: Create telegraf dir
+  file: state=directory path={{ telegraf_home }} owner={{ telegraf_user }} group={{ telegraf_group }} recurse=yes
+
+- copy:
+    src="releases/{{ telegraf_bin }}"
+    dest="{{ telegraf_home }}/{{ telegraf_bin }}"
+    owner={{ telegraf_user }} group={{ telegraf_group }} mode=0755
+
+- file:
+    path="{{ telegraf_home }}/telegraf"
+    src="{{ telegraf_home }}/{{ telegraf_bin }}"
+    owner={{ telegraf_user }} group={{ telegraf_group }} state=link
+
+- name: telegraf control script
+  template:
+    src=telegraf.sh.j2
+    dest={{ telegraf_home }}/telegraf.sh
+    owner={{ telegraf_user }} group={{ telegraf_group }} mode=0755
+
+

@@ -1,0 +1,45 @@
+---
+## 废弃
+- hosts: "{{ group }}"
+  tasks:
+  # - selinux: policy=targeted state=permissive
+
+  # # 修复被OPS账号工具破坏的文件
+  # - command: restorecon /etc/shadow
+  # - command: restorecon /etc/sudoers
+  # - command: restorecon /etc/passwd
+
+    # 挂载的网络卷需要启用
+    - command: setsebool -P virt_sandbox_use_fusefs on
+
+    # 挂载的本地文件必须符合类型
+    - command: chcon -R -t svirt_sandbox_file_t /data/usr/certs
+    - command: chcon -R -t svirt_sandbox_file_t /data/usr/kubernetes/kubeconfig
+    - command: chcon -R -t svirt_sandbox_file_t /data/usr/filebeat
+
+#   # CentOS 7下默认的策略有Bug，容器路径没有设置正确的标签
+#   # !!! 新的 selinux-policy 已修复该问题
+#   - command: semanage fcontext -a -t docker_var_lib_t "/var/lib/kubelet(/.*)?"
+#   - command: restorecon -R /var/lib/kubelet
+
+    # filebeat 要从K8S的目录采集日志
+    - command: semanage fcontext -a -t docker_var_lib_t "/var/log/pods(/.*)?"
+    - command: semanage fcontext -a -t docker_var_lib_t "/var/log/containers(/.*)?"
+  # - command: restorecon -R /var/log/containers
+
+    # 自定义策略
+  # - file: path="/data/usr/policy" state=directory
+  # - copy: src=../files/policy/k8s-policy.te dest=/data/usr/policy
+  # - command: checkmodule -M -m -o k8s-policy.mod k8s-policy.te chdir=/data/usr/policy
+  # - command: semodule_package -o k8s-policy.pp -m k8s-policy.mod chdir=/data/usr/policy
+  # - command: semodule -i k8s-policy.pp chdir=/data/usr/policy
+
+#   - command: semanage fcontext -a -t docker_exec_t /usr/bin/dockerd
+#   - selinux: policy=targeted state=permissive
+
+  # - service: name=flanneld state=restarted
+  # - service: name=docker state=restarted
+  # - service: name=kubelet state=restarted
+  # - service: name=kube-proxy state=restarted
+  become: yes
+  gather_facts: yes

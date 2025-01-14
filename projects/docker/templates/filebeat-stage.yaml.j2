@@ -1,0 +1,57 @@
+################### Filebeat Configuration Example #########################
+
+############################# Filebeat ######################################
+filebeat:
+  # List of prospectors to fetch data.
+  prospectors:
+    -
+      paths:
+        - /var/log/containers/m-so-com-web-*
+        - /var/log/containers/one-search-so-flow-new-*
+        - /var/log/containers/pc-image-so-com-web-*
+        - /var/log/containers/m-image-so-com-web-*
+        - /var/log/containers/tianqi-so-com-web-*
+        - /var/log/containers/j-www-so-com-web-*
+        - /var/log/containers/notify-script-gps-info-log-*
+        - /var/log/containers/ai-dati-ws-*
+        - /var/log/containers/tran-news-so-com-web-*
+      symlinks: true
+#     tail_files: true
+      encoding: plain
+      input_type: log
+      fields:
+        type: k8s-log
+        cluster: {{ filebeat_cluster }}
+        hostname: {{ ansible_nodename }}
+      fields_under_root: true
+      scan_frequency: 5s
+      max_bytes: 1048576        # 1M
+
+  # General filebeat configuration options
+  registry_file: /data/usr/filebeat/kube-filebeat.registry
+  spool_size: {{ 2048 * filebeat_logstash|length }}    # N * bulk_max_size
+
+############################# Libbeat Config ##################################
+# Base config file used by all other beats for using libbeat features
+
+############################# Output ##########################################
+
+# Configure what outputs to use when sending the data collected by the beat.
+# Multiple outputs may be used.
+output:
+  ### Logstash as output
+  logstash:
+    # The Logstash hosts
+    hosts: ["{{ filebeat_logstash|join('","') }}"]
+    worker: {{ filebeat_logstash_worker }}
+    compression_level: 1
+    loadbalance: true
+    bulk_max_size: 2048
+
+  # console:
+    #pretty
+
+############################# Logging #########################################
+
+logging:
+  level: warning

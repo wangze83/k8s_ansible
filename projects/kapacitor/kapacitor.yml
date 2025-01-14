@@ -1,0 +1,16 @@
+---
+- hosts: "{{ group }}"
+  vars_files:
+    - inventory/vars/{{ group }}
+    - inventory/vars/{{ group }}.vault
+  roles:
+    - kapacitor
+  tasks:
+    - name: Kapacitor configuration
+      template:
+        src="templates/{{ kapacitor_conf_template }}"
+        dest="{{ kapacitor_conf }}"
+        owner={{ kapacitor_user }} group={{ kapacitor_group }} mode=0644 force=yes
+      tags: configuration
+  become: yes
+  gather_facts: yes

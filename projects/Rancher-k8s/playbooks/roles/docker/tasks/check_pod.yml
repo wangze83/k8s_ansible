@@ -1,0 +1,72 @@
+---
+- name: label node noschedule
+  shell: "/usr/local/bin/kubectl taint node {{ inventory_hostname }} wz.cloud/maintenance=new:NoSchedule"
+  delegate_to: 127.0.0.1
+  ignore_errors: true
+  become: false
+
+
+- name: gen check-pod-{{inventory_hostname}}.yml
+  template:
+    src: check-pod.json.j2
+    dest: ./pod/check-pod-{{inventory_hostname}}.yml
+  delegate_to: 127.0.0.1
+  become: false
+
+
+- name: check-pod
+  shell: /usr/local/bin/kubectl get node "{{ inventory_hostname }}" -o json | jq ".spec.taints[0].effect"
+  delegate_to: 127.0.0.1
+  register: taint
+  become: false
+
+  
+
+- name: apply check-pod-{{ inventory_hostname }}
+  shell: /usr/local/bin/kubectl apply -f ./pod/check-pod-{{ inventory_hostname }}.yml
+  delegate_to: 127.0.0.1
+  register: pod
+  become: false
+  when: taint.stdout != ""
+
+- name: get PodIP
+  shell: /usr/local/bin/kubectl get pod check-pod-{{inventory_hostname}} -o json | jq -r '.status.podIP'
+  delegate_to: 127.0.0.1
+  register: ip
+  until: ip.stdout != "null"
+  become: false
+  retries: 1000
+  delay: 10
+
+ 
+ 
+- name: check connectivity
+  shell: ping -q -c 5 {{ ip.stdout }}
+  delegate_to: 127.0.0.1
+  register: connect
+  become: false
+
+
+- name: check connectivity result
+  shell: /usr/local/bin/kubectl delete -f ./pod/check-pod-{{ inventory_hostname }}.yml
+  failed_when: "connect.rc != 0 and '100.0% packet loss' in connect.stdout"
+  become: false
+  delegate_to: 127.0.0.1
+  retries: 3
+  delay: 5
+
+
+- name: cancel label node {{ inventory_hostname }} NoSchedule
+  shell: /usr/local/bin/kubectl taint node {{ inventory_hostname }} wz.cloud/maintenance=new:NoSchedule-
+  delegate_to: 127.0.0.1
+  become: false
+
+
+- name: label node {{ inventory_hostname }} group=default
+  shell: /usr/local/bin/kubectl label node {{ inventory_hostname }} group=default
+  delegate_to: 127.0.0.1
+  become: false
+  ignore_errors: true
+
+
+

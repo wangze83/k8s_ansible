@@ -1,0 +1,59 @@
+- command: yum-complete-transaction --cleanup-only
+- name: 安装系统工具
+  yum: name=ack,jq,mlocate,bash-completion,vim,deltarpm state=latest
+
+- yum: name=htop,iotop,sysstat,conntrack-tools,numactl,netsniff-ng,dropwatch state=latest
+
+- name: 调整服务器配置
+  command: tuned-adm profile throughput-performance
+
+# /etc/chrony.conf中已指定ntp1.wz.net
+- yum: name=chrony state=latest
+- service: name=chronyd enabled=yes
+- service: name=chronyd state=started
+
+- yum: name=numad state=latest
+- service: name=numad enabled=yes
+- service: name=numad state=started
+
+- selinux: policy=targeted state=disabled
+
+- lineinfile: dest=/etc/sysctl.d/99-sysctl.conf state=present
+    line="net.bridge.bridge-nf-call-arptables = 1"
+# - lineinfile: dest=/etc/sysctl.d/99-sysctl.conf state=present
+#         line="net.bridge.bridge-nf-call-ip6tables = 1"
+- lineinfile: dest=/etc/sysctl.d/99-sysctl.conf state=present
+    line="net.bridge.bridge-nf-call-iptables = 1"
+
+# Swap off (用于处理已上线机器)
+# - command: swapoff -a
+# - lineinfile:
+#     dest: /etc/fstab
+#     state: present
+#     regexp: '^(/dev/mapper/VolGroup00-LogVol00 swap.*)'
+#     line: '#\1'
+#     backrefs: yes
+
+# ???
+# - lineinfile: dest=/etc/cron.daily/mlocate state=present
+#         line="PRUNEPATHS = /s/var/hdp"
+
+- yum: name=* state=latest exclude=kernel*,centos-release*,docker-engine*,initscripts,bash
+  ignore_errors: yes
+# # Keep CentOS-QH.repo Only
+# - file: path="/etc/yum.repos.d/CentOS-Base.repo" state=absent
+# - file: path="/etc/yum.repos.d/CentOS-CR.repo" state=absent
+# - file: path="/etc/yum.repos.d/CentOS-Debuginfo.repo" state=absent
+# - file: path="/etc/yum.repos.d/CentOS-fasttrack.repo" state=absent
+# - file: path="/etc/yum.repos.d/CentOS-Media.repo" state=absent
+# - file: path="/etc/yum.repos.d/CentOS-Sources.repo" state=absent
+# - file: path="/etc/yum.repos.d/CentOS-Vault.repo" state=absent
+
+- file: path="/data/usr" state=directory
+- file: path="/data/var" state=directory
+- file: path="/data/var/lib" state=directory
+- file: path="/data/var/run" state=directory mode=777
+- file: path="/data/log" state=directory mode=777
+
+- command: modprobe br_netfilter
+- command: modprobe nf_conntrack

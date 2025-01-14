@@ -1,0 +1,10 @@
+---
+
+- name: Logstash plugins
+  command: "bin/plugin install {{ item }}"
+  args:
+    chdir: "{{ ls_home }}"
+  with_items: "{{ ls_plugins }}"
+  when: ls_plugins
+
+

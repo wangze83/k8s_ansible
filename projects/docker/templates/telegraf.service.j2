@@ -1,0 +1,16 @@
+[Unit]
+Description=The plugin-driven server agent for reporting metrics into InfluxDB
+Documentation=https://github.com/influxdata/telegraf
+After=network.target
+
+[Service]
+Environment='STDOUT={{ telegraf_log }}'
+Environment='STDERR={{ telegraf_log }}'
+Environment='GOMAXPROCS=2'
+ExecStart=/bin/sh -c "exec /bin/telegraf -config {{ telegraf_config }} ${TELEGRAF_OPTS} >>${STDOUT} 2>>${STDERR}"
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target

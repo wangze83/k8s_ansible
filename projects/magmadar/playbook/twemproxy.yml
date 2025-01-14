@@ -1,0 +1,30 @@
+---
+- hosts: "{{ dc }}"
+  remote_user: group
+  vars:
+    assets_path: ../files
+  vars_files:
+    - inventory/vars/magmadar.vault
+  tasks:
+    # 安装服务
+    - file: path=/search/srv/twemproxy state=directory mode=0744
+    - copy:
+        src={{ assets_path }}/bin/nutcracker dest=/search/srv/twemproxy/ mode=0744
+
+    # 同步配置
+    - copy:
+        src={{ assets_path }}/magmadar/supervisord.d/twemproxy.ini
+        dest=/search/local/etc/supervisord.d/twemproxy.ini
+        force=yes
+    - template:
+        src={{ assets_path }}/magmadar/twemproxy.j2.22222
+        dest=/search/srv/twemproxy/magmadar.yml.22222
+    - template:
+        src={{ assets_path }}/magmadar/twemproxy.j2.22223
+        dest=/search/srv/twemproxy/magmadar.yml.22223
+
+    # 启动服务
+    - supervisorctl: name="magmadar-twemproxy:" state=present
+    - supervisorctl: name="magmadar-twemproxy:" state=restarted
+  sudo: no
+  gather_facts: yes

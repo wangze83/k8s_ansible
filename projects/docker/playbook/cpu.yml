@@ -1,0 +1,70 @@
+---
+- hosts: "{{ group }}"
+  serial: 99
+  tasks:
+#  - name: Display all variables/facts known for a host
+#    debug:
+#      var: hostvars[inventory_hostname]
+  - debug:
+      msg: "{{ ansible_processor_vcpus }}"
+  # - debug:
+  #     msg: "{{ ansible_default_ipv4['address'] }} {{ ansible_default_ipv4['macaddress'] }}"
+  # - command: swapoff -a
+  # - lineinfile:
+  #     dest: /etc/fstab
+  #     state: present
+  #     regexp: '^(/dev/mapper/VolGroup00-LogVol00 swap.*)'
+  #     line: '#\1'
+  #     backrefs: yes
+  #
+  # - command: hostnamectl set-hostname {{ inventory_hostname }}
+
+  # - service: name=ntpd state=stopped
+  # - command: ntpdate ntp1.wz.net
+  # - service: name=ntpd state=started
+
+  # - shell: uname -a
+  #   register: result
+  # - debug: var=result['stdout_lines']
+
+  # - firewalld: permanent=yes immediate=yes zone=public service=http state=enabled
+  # - firewalld: permanent=yes immediate=yes zone=public service=https state=enabled
+
+  # - shell: "nohup /usr/local/bin/supervise /usr/local//wonder-agent > /dev/null 2>&1 &"
+  #   register: result
+  # - debug: var=result['stderr_lines']
+
+  # - shell: "lscpu | grep 'Model name'"
+  #   register: result
+  # - debug: var=result['stdout_lines']
+
+  # - shell: "/sbin/ifup-local flannel.1"
+  # - shell: "ls /etc/systemd/system/flanneld.service.d/tune.conf"
+
+  # - shell: "cat /sys/class/net/flannel.1/queues/rx-0/rps_cpus"
+  #   register: result
+  # - debug: var=result['stdout_lines']
+
+  # - shell: "cat /sys/class/net/eth0/device/numa_node"
+  #   register: result
+  # - debug: var=result['stdout_lines']
+
+  # - shell: "/usr/sbin/ip route get 10.1.1.1"
+  #   register: result
+  # - debug: var=result['stdout_lines']
+
+  # - shell: "/bin/flanneld -version"
+  #   register: result
+  # - debug: var=result['stderr_lines']
+  # - command: lvextend -L 256M VolGroup01/ThinPool00_tmeta
+  #
+  # - command: docker tag r.wz.cloud/rhel7/pod-infrastructure:latest wz.cloud/rhel7/pod-infrastructure:latest
+  #   ignore_errors: yes
+  #
+  #
+  # - shell: "systemctl restart firewalld"
+  # - shell: "systemctl restart kube-proxy"
+  #   register: result
+  # - debug: var=result['stderr_lines']
+  become: yes
+  gather_facts: true

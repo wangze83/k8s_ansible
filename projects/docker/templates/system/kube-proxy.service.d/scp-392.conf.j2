@@ -1,0 +1,4 @@
+[Service]
+ExecStartPost=-/usr/sbin/iptables -t nat -D POSTROUTING -m mark --mark 0x4000/0x4000 -j SNAT --to-source {{ net | nthhost('0') }}-{{ net | nthhost(-1) }}
+ExecStartPost=/usr/sbin/iptables -t nat -I POSTROUTING -m mark --mark 0x4000/0x4000 -j SNAT --to-source {{ net | nthhost('0') }}-{{ net | nthhost(-1) }}
+

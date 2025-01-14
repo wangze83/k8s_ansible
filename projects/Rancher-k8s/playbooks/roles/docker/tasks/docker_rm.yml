@@ -1,0 +1,17 @@
+- name: get whether has installed docker service
+  shell: 'systemctl is-active docker'
+  register: docker_svc
+
+- name: 'remove docker'
+  yum: 
+  loop: 
+    - docker
+    - docker-client
+    - docker-client-latest
+    - docker-common
+    - docker-latest
+    - docker-latest-logrotate
+    - docker-logrotate
+    - docker-engine
+    - docker-ce
+  when: docker_svc.stdout == "active"

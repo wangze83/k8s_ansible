@@ -1,0 +1,52 @@
+---
+- hosts: "{{ group }}"
+  serial: 1
+  tasks:
+    # 手动驱逐node节点Pod，准备升级
+    # kubectl drain {{ inventory_hostname }}  --force --delete-local-data --ignore-daemonsets
+    - name: drain node
+      shell: kubectl drain {{ inventory_hostname }}  --force --delete-local-data --ignore-daemonsets
+      delegate_to: 127.0.0.1
+      become: false
+
+    - include_tasks: "gen-node-certs.yml"
+
+    # copy certs
+    - copy: src="../files/certs/{{orgs}}.20201124/ca.pem"
+        dest="/data/usr/certs/" mode="644"
+    - copy: src="../files/certs/{{orgs}}.20201124/kube-service-account.pem"
+        dest="/data/usr/certs/" mode="644"
+    - copy: src="../files/node-certs/docker_certs/{{ inventory_hostname }}.csr"
+        dest="/data/usr/certs/" mode="644"
+    - copy: src="../files/node-certs/docker_certs/{{ inventory_hostname }}.pem"
+        dest="/data/usr/certs/" mode="644"
+    - copy: src="../files/node-certs/docker_certs/{{ inventory_hostname }}-key.pem"
+        dest="/data/usr/certs/" mode="600"
+
+    - command: systemctl daemon-reload
+    - command: systemctl restart docker
+    - command: systemctl restart kubelet
+    - command: systemctl restart kube-proxy
+    - command: systemctl restart calico-bird
+    - command: systemctl restart calico-confd
+
+    - service: name=kube-proxy enabled=yes
+    - service: name=kubelet enabled=yes
+    - service: name=calico-bird enabled=yes
+    - service: name=calico-confd enabled=yes
+    - service: name=docker enabled=yes
+
+    # 恢复调度
+    # kubectl uncordon {{ inventory_hostname }}
+    - name: uncordon node
+      shell: kubectl uncordon {{ inventory_hostname }}
+      delegate_to: 127.0.0.1
+      become: false
+
+    - name: restart filebeat
+      shell: kubectl delete pods $(kubectl get pod -o wide | grep {{ inventory_hostname }} | grep 'infra-log-filebeat' | awk '{print $1}')   --grace-period 0 --force
+      delegate_to: 127.0.0.1
+      become: false
+
+  become: yes
+  gather_facts: yes

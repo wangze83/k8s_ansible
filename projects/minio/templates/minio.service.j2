@@ -1,0 +1,14 @@
+[Unit]
+Description=Minio is a high performance distributed object storage server, designed for large-scale private cloud infrastructure. 
+Documentation=https://docs.minio.io/
+After=network.target
+
+[Service]
+Environment='MINIO_ACCESS_KEY={{ minio.access_key }}'
+Environment='MINIO_SECRET_KEY={{ minio.secret_key }}'
+ExecStart=/data/usr/minio/minio server '{{ minio.nodes }}'
+Restart=on-failure
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target

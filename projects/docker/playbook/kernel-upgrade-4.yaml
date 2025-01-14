@@ -1,0 +1,31 @@
+---
+- hosts: "{{ group }}"
+  serial: 10
+  vars:
+    kernel_version: 4.19.49-1
+    k8s_version: 1.10.13
+  tasks:
+    - unarchive: src=../files/kernel-{{ kernel_version }}.el7.x86_64.tar.gz dest=/tmp
+    - shell: "yum install /tmp/kernel-{{ kernel_version }}/dracut*.rpm -y"
+      ignore_errors: true
+    - yum: name=/tmp/kernel-{{ kernel_version }}/kernel-{{ kernel_version }}.el7.x86_64.rpm state=present
+    - yum: name=/tmp/kernel-{{ kernel_version }}/kernel-headers-{{ kernel_version }}.el7.x86_64.rpm state=present
+    - yum: name=/tmp/kernel-{{ kernel_version }}/kernel-devel-{{ kernel_version }}.el7.x86_64.rpm state=present
+    - yum: name=/tmp/kernel-{{ kernel_version }}/perf-{{ kernel_version }}.el7.x86_64.rpm state=present
+    - yum: name=/tmp/kernel-{{ kernel_version }}/python-perf-{{ kernel_version }}.el7.x86_64.rpm state=present
+
+    - copy: src=../files/ttm.conf dest=/etc/modules-load.d/ mode=755
+    - command: rm /etc/sysconfig/modules/br_netfilter.modules
+      ignore_errors: yes
+    - command: rm /etc/modules-load.d/br_netfilter.conf
+      ignore_errors: yes
+    - command: rm /etc/sysconfig/modules/ttm.modules
+      ignore_errors: yes
+    - yum: name=/tmp/kernel-{{ kernel_version }}/ttm_ipv4-0.0.2-1dkms.noarch.rpm state=present
+    - command: dkms install ttm_ipv4/0.0.2 -k 4.19.49-1.el7.x86_64
+    - shell: "sleep 30"
+      async: 1
+      poll: 0
+      ignore_errors: true
+  become: yes
+  gather_facts: yes

@@ -1,0 +1,18 @@
+---
+- hosts: "{{ dc }}"
+  remote_user: group
+  tasks:
+    # release_version: x.x.x
+    # 检查服务部署状态
+    - stat: path=/search/srv/magmadar-ng/release/magmadarNG-{{ release_version }}
+      register: st
+    - fail: msg="magmadarNG-{{ release_version }} is already deployed!"
+      when: st.stat.isdir is defined and st.stat.isdir
+
+    # 部署发布包
+    - unarchive:
+        src=../files/magmadar/releases/magmadarNG-{{ release_version }}.tar.gz
+        dest=/search/srv/magmadar-ng/releases
+  sudo: no
+  gather_facts: no
+

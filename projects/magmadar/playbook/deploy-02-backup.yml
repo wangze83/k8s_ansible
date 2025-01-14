@@ -1,0 +1,24 @@
+---
+- hosts: "{{ dc }}"
+  remote_user: group
+  tasks:
+    # backup_version: x.x.x
+    # 检查服务部署状态
+    - stat: path=/search/srv/magmadar-ng/releases/magmadarNG-{{ backup_version }}
+      register: st
+    - fail: msg="/search/srv/magmadar-ng/releases/magmadarNG-{{ backup_version }} is not exist!"
+      when: not st.stat.isdir
+
+    # 运行备份环境
+    - file:
+        path=/search/srv/magmadar-ng/magmadar-backup
+        src=/search/srv/magmadar-ng/releases/magmadarNG-{{ backup_version }}
+        state=link
+    - command: "supervisorctl restart magmadar-ng-backup:"
+    - command: "supervisorctl status magmadar-ng-backup:"
+      register: output
+    - fail: msg="magmadar-ng-backup is not running!"
+      when: output.stdout.find("RUNNING") == -1
+  sudo: no
+  gather_facts: no
+

@@ -1,0 +1,16 @@
+---
+- hosts: "{{ group }}"
+  tasks:
+  # - shell: "docker info | grep 'Metadata Space Available'"
+  #   register: result
+  # - debug: var=result['stdout_lines']
+
+    - shell: "docker images | grep 'months ago' | awk '{ print $3 }' | xargs docker rmi"
+      ignore_errors: yes
+      failed_when: false
+
+    - shell: "docker info | grep 'Metadata Space Available'"
+      register: result
+    - debug: var=result['stdout_lines']
+  become: yes
+  gather_facts: no

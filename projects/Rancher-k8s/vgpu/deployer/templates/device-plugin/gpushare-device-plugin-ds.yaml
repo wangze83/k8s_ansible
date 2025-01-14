@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: gpushare-device-plugin-ds
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      component: gpushare-device-plugin
+      app: gpushare
+      name: gpushare-device-plugin-ds
+      type: runtime
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+      labels:
+        component: gpushare-device-plugin
+        app: gpushare
+        name: gpushare-device-plugin-ds
+        type: runtime
+    spec:
+      serviceAccount: gpushare-device-plugin
+      hostNetwork: true
+      nodeSelector:
+        wz.cloud/vgpu: "true"
+      initContainers:
+        - name: waiting-for-nvidia-driver-daemonset
+          image: harbor.wz.net/x./busybox:latest
+          command: ["sleep", "10"]
+      containers:
+      - name: gpushare
+        {{- if .Values.pullImageByVPCNetwork }}
+        image: "{{ .Values.images.devicePlugin.image | replace "registry." "registry-vpc." }}:{{ .Values.images.devicePlugin.tag }}"
+        {{- else }}
+        image: "{{ .Values.images.devicePlugin.image }}:{{ .Values.images.devicePlugin.tag }}"
+        {{- end }}
+        imagePullPolicy: {{ .Values.images.devicePlugin.pullPolicy }}
+        # Make this pod as Guaranteed pod which will never be evicted because of node's resource consumption.
+        command:
+          - gpushare-device-plugin-v2
+          - -logtostderr
+          - --v=5
+          - --memory-unit=GiB
+        resources:
+          limits:
+            memory: "300Mi"
+            cpu: "300m"
+          requests:
+            memory: "300Mi"
+            cpu: "300m"
+        env:
+        - name: KUBECONFIG
+          value: /etc/kubernetes/kubelet.conf
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        volumeMounts:
+          - name: device-plugin
+            mountPath: /var/lib/kubelet/device-plugins
+      volumes:
+        - name: device-plugin
+          hostPath:
+            path: /var/lib/kubelet/device-plugins

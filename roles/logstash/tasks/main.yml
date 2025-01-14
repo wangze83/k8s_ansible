@@ -1,0 +1,5 @@
+---
+- include: java.yml
+- include: logstash.yml
+- include: logstash-config.yml
+- include: logstash-plugins.yml

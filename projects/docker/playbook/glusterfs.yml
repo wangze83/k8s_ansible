@@ -1,0 +1,37 @@
+---
+
+- yum: name=centos-release-gluster41 state=latest
+- yum: name=glusterfs state=latest
+- yum: name=glusterfs-fuse state=latest
+
+# - service: name=glusterd enabled=yes
+# - service: name=glusterd state=restarted
+
+# - firewalld: permanent=yes immediate=yes zone=trusted source='{{ item }}' state=enabled
+#   with_items: "{{ firewalld.gluster_clients }}"
+# - command: firewall-cmd --add-source='{{ item }}' --zone=trusted
+#   with_items: "{{ firewalld.gluster_clients }}"
+
+# Thinly-Provisioned Logical Volumes for GlusterFS
+# - command: lvcreate -L 500g --thin VolGroup01/ThinPool01
+# - command: lvcreate -V 20g --thin VolGroup01/ThinPool01 -n ThinVol{{ item }}
+#   with_sequence: start=1 end=3 format='%02d'
+# - filesystem: fstype=xfs dev=/dev/VolGroup01/ThinVol{{ item }}
+#   with_sequence: start=1 end=3 format='%02d'
+# - mount: name=/gfs/brick{{ item }} src=/dev/VolGroup01/ThinVol{{ item }} fstype=xfs opts="defaults" state=mounted
+#   with_sequence: start=1 end=3 format='%02d'
+
+# https://gluster.readthedocs.io/en/latest/Administrator%20Guide/Setting%20Up%20Volumes/
+#
+# sudo gluster volume create disperse_vol_01 disperse 6 redundancy 2 server{1..6}:/gfs/brick01/export
+#
+# sudo gluster volume create fs_stripe stripe 2 transport tcp 172.17.37.0:/gfs/brick0/export 172.17.62.0:/gfs/brick0/export
+# sudo gluster volume create fs_replica replica 2 transport tcp 172.17.37.0:/gfs/brick1/export 172.17.62.0:/gfs/brick1/export
+# sudo gluster volume create fs_replica replica 3 arbiter 1 transport tcp 172.17.37.0:/gfs/brick1/export 172.17.62.0:/gfs/brick1/export
+# sudo gluster volume create test-volume disperse 3 redundancy 1 server{1..6}:/bricks/test-volume
+#
+# sudo gluster volume start disperse_vol_01
+# sudo gluster volume quota disperse_vol_01 enable
+# sudo gluster volume quota disperse_vol_01 limit-usage / 10GB
+# sudo mount -t glusterfs IP:/XXX /mnt/gfs
+

@@ -1,0 +1,47 @@
+- name: import the Ali repo
+  get_url:
+    url: https://mirrors.aliyun.com/repo/Centos-7.repo
+    dest: /etc/yum.repos.d/CentOS-Base.repo
+    validate_certs: false
+  retries: 10
+  delay: 6
+
+
+- name: replace repo
+  lineinfile:
+    path: /etc/yum.repos.d/CentOS-Base.repo
+    regexp: "mirrors.cloud.aliyuncs.com|mirrors.aliyuncs.com"
+    state: absent
+
+
+- name: import the docker repo
+  shell: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  ignore_errors: true
+
+
+- name: "install docker"
+  yum:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ docker_pkgs }}"
+
+
+- name: start service
+  service:
+    name: "docker"
+    state: started
+    enabled: true
+
+
+- name: create docker directory
+  file:
+    state: directory
+    path: "/etc/docker"
+    mode: 0755
+
+
+- name: cp daemon config file
+  copy:
+    src: daemon.json
+    dest: /etc/docker/daemon.json
+  notify: restart docker

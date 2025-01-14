@@ -1,0 +1,45 @@
+- name: modprobe br_netfilter
+  modprobe: 
+    name: br_netfilter
+    state: present
+
+
+- name: ipv4_forward
+  sysctl:
+    ignoreerrors: true
+    name: "{{ item }}"
+    value: "1"
+    state: present
+    reload: yes
+  loop:
+  - net.ipv4.ip_forward
+  - net.bridge.bridge-nf-call-iptables
+  - net.bridge.bridge-nf-call-ip6tables
+
+
+- name: install ipvs
+  yum:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - ipvsadm
+    - ipset
+
+
+- name: copy ipvs.modules
+  copy:
+    src: "ipvs.modules"
+    dest: "/etc/sysconfig/modules/ipvs.modules"
+  tags:
+    - master
+    - node
+    - docker
+
+- name: execute ipvs.modules
+  shell: bash /etc/sysconfig/modules/ipvs.modules
+
+
+- name: check ipvs.modules
+  shell: lsmod | grep ip_vs | wc -l
+  register: ipvs
+  until: ipvs.stdout >= "1"

@@ -1,0 +1,19 @@
+create ingress-deny-net hash:net
+  add ingress-deny-net 0.0.0.0/1
+  add ingress-deny-net 128.0.0.0/1
+  add ingress-deny-net 172.17.0.0/16 nomatch
+{% for host in firewalld['trusted_sources'] %}
+  add ingress-deny-net {{ host }} nomatch
+{% endfor %}
+create egress-restrict-net hash:net
+  add egress-restrict-net 10.1.1.1/8
+  add egress-restrict-net {{ calico_pool['cidr'] }} nomatch
+create egress-deny-tcp-port bitmap:port range 1-1024
+  add egress-deny-tcp-port 1-52
+  add egress-deny-tcp-port 54-79
+  add egress-deny-tcp-port 81-442
+  add egress-deny-tcp-port 444-1024
+create egress-deny-udp-port bitmap:port range 1-1024
+  add egress-deny-udp-port 1-52
+  add egress-deny-udp-port 54-1024
+

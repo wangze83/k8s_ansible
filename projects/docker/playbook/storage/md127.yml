@@ -1,0 +1,72 @@
+---
+
+# NAME                       MAJ:MIN RM   SIZE RO TYPE  MOUNTPOINT
+# sda                          8:0    0 931.5G  0 disk  
+# ├─sda1                       8:1    0     1G  0 part  /boot
+# └─sda2                       8:2    0 930.5G  0 part  
+#   ├─VolGroup00-LogVol03    253:0    0    20G  0 lvm   /
+#   ├─VolGroup00-LogVol00    253:1    0     4G  0 lvm   [SWAP]
+#   ├─VolGroup00-LogVol--da1 253:2    0 900.7G  0 lvm   /da1
+#   ├─VolGroup00-LogVol02    253:3    0     4G  0 lvm   /var
+#   └─VolGroup00-LogVol01    253:4    0     1G  0 lvm   /tmp
+# sdb                          8:16   0 279.5G  0 disk  
+# └─md127                      9:127  0   1.4T  0 raid0 
+# sdc                          8:32   0 279.5G  0 disk  
+# └─md127                      9:127  0   1.4T  0 raid0 
+# sdd                          8:48   0 279.5G  0 disk  
+# └─md127                      9:127  0   1.4T  0 raid0 
+# sde                          8:64   0 279.5G  0 disk  
+# └─md127                      9:127  0   1.4T  0 raid0 
+# sdf                          8:80   0 279.5G  0 disk  
+# └─md127                      9:127  0   1.4T  0 raid0
+#
+# sudo mdadm --zero-superblock /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+# sudo mdadm --create /dev/md127 -l 0 -n 5 /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+# sudo mdadm -D /dev/md127
+
+- hosts: "{{ group }}"
+  tasks:
+    - command: mdadm --stop /dev/md127
+      ignore_errors: yes
+    - command: mdadm --zero-superblock /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+    - command: mdadm --create --run /dev/md127 -l 0 -n 5 /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+  # - command: mdadm --create --run /dev/md127 -l 5 -n 5 /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+      # mdadm --detail /dev/md127
+
+    - lvg:  vg=VolGroup01 pvs=/dev/md127
+    # Docker library (/var/lib/docker/containers)
+    - lvol: vg=VolGroup01 lv=LogVol00 size=300g
+    - filesystem: fstype=xfs dev=/dev/VolGroup01/LogVol00
+    - file: state=directory path=/var/lib/docker
+    - mount: name=/var/lib/docker src=/dev/VolGroup01/LogVol00 fstype=xfs opts="defaults" state=mounted
+    # Docker thin pool (/var/lib/docker/devicemapper)
+    - command: lvcreate -L 500g --thin VolGroup01/ThinPool00 --poolmetadatasize 256m
+
+  # # etcd
+  # - lvol: vg=VolGroup01 lv=LogVol01 size=10g
+  # - filesystem: fstype=xfs dev=/dev/VolGroup01/LogVol01
+  # - file: state=directory path=/var/lib/etcd
+  # - mount: name=/var/lib/etcd src=/dev/VolGroup01/LogVol01 fstype=xfs opts="defaults" state=mounted
+
+    # SWAP
+    - command: swapoff -a
+    - lineinfile:
+        dest: /etc/fstab
+        state: present
+        regexp: '^(/dev/mapper/VolGroup00-LogVol00 swap.*)'
+        line: '#\1'
+        backrefs: yes
+
+    # Path: /tmp
+    - lvol: vg=VolGroup00 lv=LogVol01 size=20g
+    - command: xfs_growfs /dev/VolGroup00/LogVol01
+    # Path: /var
+    - lvol: vg=VolGroup00 lv=LogVol02 size=300g
+    - command: xfs_growfs /dev/VolGroup00/LogVol02
+    # Path: /
+    - lvol: vg=VolGroup00 lv=LogVol03 size=200g
+    - command: xfs_growfs /dev/VolGroup00/LogVol03
+    # Path: /data
+    - file: state=directory path=/data
+  become: yes
+  gather_facts: no

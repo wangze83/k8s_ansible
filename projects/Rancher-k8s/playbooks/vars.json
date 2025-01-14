@@ -1,0 +1,6 @@
+group: "map_idc"
+pvcName: "cpcrecommend-rank-ctr-infer-gnn-test-data"
+pvName: "pvc-b9b7c2a0-2c18-4fa7-8f80-9ada72681d5e"
+port: 10001
+idcs:
+- idc

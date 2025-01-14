@@ -1,0 +1,35 @@
+{
+  "signing": {
+    "default": {
+      "expiry": "327200h"
+    },
+    "profiles": {
+      "kubernetes": {
+        "usages": [
+            "signing",
+            "key encipherment",
+            "server auth",
+            "client auth"
+        ],
+        "expiry": "327200h"
+      },
+      "kubelet": {
+        "usages": [
+            "signing",
+            "key encipherment",
+            "client auth"
+        ],
+        "expiry": "327200h"
+      },
+      "kube-service-account": {
+        "usages": [
+            "signing",
+            "key encipherment",
+            "server auth",
+            "client auth"
+        ],
+        "expiry": "327200h"
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+- name: 'shutdown swap temproraily'
+  shell: swapoff -a
+
+
+- name: 'annotate swap from /etc/fstab'
+  lineinfile:
+    path: /etc/fstab
+    state: present
+    regexp: '^(/dev.*swap.*)'
+    line: '#\1'
+    backrefs: yes

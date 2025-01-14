@@ -1,0 +1,37 @@
+---
+- hosts: '{{ group }}'
+  serial: 5
+  become: no
+  gather_facts: yes
+  tasks:
+    # 如果脚本 hang 住，登录机器能发现 yum 进程是 s 状态，更新 Ceph.repo 可以解决
+    - shell: "grep \"model name\" /proc/cpuinfo | head -1 | awk '{print $7$8}'"
+      register: cpu_family
+
+    - debug:
+        msg: "label node {{inventory_hostname}} wz.cloud/cpu={{cpu_family.stdout}}"
+    - command: "{{ kube_home }}/kubernetes/bin/kubectl --kubeconfig {{ kube_home }}/kubeconfig label node {{inventory_hostname}} wz.cloud/cpu={{cpu_family.stdout}}"
+      become: true
+      ignore_errors: yes
+
+    - name: get eth0 speed
+      shell: "/usr/sbin/ethtool eth0 | grep Speed | awk '{print $2}'"
+      register: eth0_result
+      ignore_errors: yes
+
+    - name: get eth2 speed
+      shell: "/usr/sbin/ethtool eth2 | grep Speed | awk '{print $2}'"
+      register: eth2_result
+      ignore_errors: yes
+    
+    - name: set node nic for 1g
+      command: "{{ kube_home }}/kubernetes/bin/kubectl --kubeconfig {{ kube_home }}/kubeconfig label node {{inventory_hostname}} wz.cloud/nic=1Gbps"
+      when: eth0_result.failed == False and eth0_result.stdout == "1000Mb/s"
+      become: true
+      ignore_errors: yes
+
+    - name: set node nic for 10g
+      command: "{{ kube_home }}/kubernetes/bin/kubectl --kubeconfig {{ kube_home }}/kubeconfig label node {{inventory_hostname}} wz.cloud/nic=10Gbps --overwrite=true"
+      when: eth2_result.failed == False and eth2_result.stdout == "10000Mb/s"
+      become: true
+      ignore_errors: yes
